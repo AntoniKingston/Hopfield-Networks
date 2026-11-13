@@ -1,0 +1,7 @@
+rule,occlusion,exact,overlap
+hebb,0.25,1.0,1.0
+hebb,0.5,1.0,1.0
+hebb,0.75,1.0,1.0
+projection,0.25,1.0,1.0
+projection,0.5,1.0,1.0
+projection,0.75,1.0,1.0

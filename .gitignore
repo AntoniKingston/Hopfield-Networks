@@ -210,3 +210,19 @@ marimo/_lsp/
 __marimo__/
 
 .DS_Store
+
+# LaTeX build artifacts (report/)
+report/*.aux
+report/*.bbl
+report/*.bcf
+report/*.blg
+report/*.fdb_latexmk
+report/*.fls
+report/*.out
+report/*.run.xml
+report/*.toc
+report/*.synctex.gz
+report/*-blx.bib
+
+# GIFs exported by the demo notebook
+notebooks/*.gif
