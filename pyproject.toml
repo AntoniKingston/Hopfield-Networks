@@ -15,8 +15,9 @@ dependencies = [
     "python-dotenv",
     "ruff",
     "scikit-image",
+    "scipy>=1.17.1",
     "transformers",
-    "ty"
+    "ty",
 ]
 
 [build-system]
@@ -51,4 +52,5 @@ where = ["src"]
 [dependency-groups]
 dev = [
     "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
 ]

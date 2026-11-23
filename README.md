@@ -1,93 +1,60 @@
-# 📦 CCAI Repository Template
+# Hopfield Networks: associative memory (Project 2, SN 2026/27)
 
-Template for new Python project repositories at the Centre for Credible AI.
+A Hopfield network used as an associative memory. It is trained with Hebb's rule and Oja's rule,
+with the delta / projection (pseudo-inverse) rule as a reference. It can be simulated
+synchronously or asynchronously, and every convergence step can be shown as a bitmap.
 
-It serves two purposes:
+## Setup
 
-1. **Unification and best practices sharing.** We want to have consistent, well-structured, high-quality repositories which will represent the Centre well.
-1. **Get you up to speed faster.** This template comes with a number of preconfigured tools so that you can start your research faster! We'll add more tools as needed. 
+```sh
+uv sync                        # creates .venv with all dependencies (incl. pytest)
+uv run python scripts/fetch_cats.py   # downloads the photos for the large-bitmap experiment
+```
 
-## 🚀 How to use this template
+## Usage
 
-### ✨ Create a new repository from this template
+```python
+import numpy as np
+from hopfield import Hopfield
+from hopfield_datasets import load_dataset
 
-1. Click "Use this template" ↗️.
+rng = np.random.default_rng(0)
 
-1. Use [kebab-case](https://en.wikipedia.org/wiki/Naming_convention_(programming)#Examples_of_multiple-word_identifier_formats) naming convention for repository name.
-1. Leave the **Owner** and **Visibility** options to their default values (CredibleAI and Private).
+d = load_dataset("animals-14x9")  # file names are WxH, so d.shape == (9, 14)
+net = Hopfield(d.shape, d.patterns)  # number of neurons = rows * cols
+net.train("hebb")  # "hebb" | "oja" | "delta" | "projection"
 
-### 🛠️ Initialize your new repository
+x = net.corrupt(d.patterns[0], 0.1, rng)  # flip 10 % of the pixels
+result = net.run(x, mode="async", seed=0)  # or mode="sync"
+net.show_history(result.history)  # slider over the steps (Jupyter)
+net.plot_history(result.history)  # grid of all steps
+net.save_history_gif(result.history, "steps.gif")
+```
 
-1. Clone your new repository.
-2. In `pyproject.toml`, change `name = "project"` to your project name.
-3. Install `uv`, the Python package manager: [instructions](https://docs.astral.sh/uv/getting-started/installation/).
-4. Run the following commands:
-   ```sh
-   uv sync
-   uv run pre-commit install
-   ```
-   They have the following effects:
-   * Creates a local Python environment as well as a `uv.lock` file. ⚠️ Important: You must commit and push this `uv.lock` file in your very first commit. The repository includes a strict GitHub Actions CI pipeline that requires this lockfile. If you push without it, your first GitHub Action run will fail!
-   * Configures Ruff's linter and formatter in pre-commit.
-5. Start coding!
+For bitmaps too large for an N x N matrix (e.g. 200x300, N = 60 000) use
+`LowRankHopfield(shape, patterns, rule="hebb" | "projection")`. It has the same API and
+memory O(PN).
 
-### 🔧 Optional configuration steps
+`notebooks/demo.ipynb` is the interactive demo used during the presentation.
 
-1. Delete dependencies you don't need in `pyproject.toml`.
+## Reproducing the report
 
-2. Remember to run `uv sync` again and commit the updated `uv.lock` if you change any dependencies.
+```sh
+uv run python scripts/run_experiments.py           # all experiments (~10 min)
+uv run python scripts/run_experiments.py --only q4 # one section: q1 q3 q4 q6 q7 q8 q9
+cd report && latexmk -pdf main.tex
+```
 
-## 📦 What does this template contain?
+All randomness comes from `numpy.random.default_rng` seeded with `experiments.SEED = 2026`
+(per-experiment sub-seeds are derived from it). Raw results go to `results/`, LaTeX tables to
+`report/tables/` and figures to `report/figures/`.
 
-1. **Unified** project naming, `README.md` and folder structure.
+## Layout
 
-   **Why:** Our repositories are consistent, so they're easier to understand.
-2. **[uv](https://docs.astral.sh/uv/) package manager** with modern configuration.
-
-   **Why:** Dependencies install in seconds. Ensures reproducibility (everyone using this repo has the exact same environment).
-3. Most common **Python package dependencies**. 
-
-   **Why:** You can start your development faster — the most common ML/research packages are pre-installed. (Feel free to delete what you don't need.)
-4. **[Ruff](https://docs.astral.sh/ruff/) linter and formatter** configured in [pre-commit](https://pre-commit.com/).
-
-5. **[GitHub Actions](https://docs.github.com/en/actions/get-started/understand-github-actions)** CI pipeline for automatic linting and type-checking.
-
-   **Why:** Every push and pull request to `main` automatically runs Ruff and Ty in a strict locked environment. This guarantees code quality and catches errors before they are merged.
-
-   **Why:** Automatic formatting and lint checks on every commit — consistent style and fewer bugs.
-6. **[Setuptools](https://setuptools.pypa.io/en/latest/)** configuration. 
-
-   **Why:** Your `src/` code is importable anywhere in the project — no path hacks needed.
-
-## 📁 Folder structure
-
-* `src/` — source folder. Everything you put here will be available as modules across the entire project. For example, a file `src/myproject/metrics.py` can be imported as `import myproject.metrics`.
-* `notebooks/` — folder for notebooks.
-
-## 🔄 Life of the repository
-
-1. Please keep your repository as "Private" during development.
-2. When your project is finished and ready to show to the world (congrats btw!):
-   * Fill in the `README.md` template below.
-   * Delete those instructions.
-   * Change repository visibility to "Public".
-
-💡 Have suggestions for improving this template? Submit a PR!
-
----
-
-# [Project name]
-
-> Project overview. What should a user know to understand what your project is about?
-
-## 🛠️ Setup
-
-> Setup instructions. What must a user do to be able to run your code?
-
-## 🚀 How to use it
-
-> Usage example. What's the minimal meaningful example that demonstrates the core ideas from your project?
-
-## 📚 Citation
-
-> Citation instructions. How should people cite your work?
+* `src/hopfield.py`: the network (`Hopfield`, `LowRankHopfield`), learning rules, dynamics,
+  visualization.
+* `src/hopfield_datasets.py`: dataset loading, image binarization, pattern statistics.
+* `src/experiments.py`: one function per question of the assignment.
+* `scripts/`: experiment runner and data download.
+* `tests/`: `uv run pytest`.
+* `report/`: LaTeX report (Polish).
