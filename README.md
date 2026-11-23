@@ -45,9 +45,21 @@ uv run python scripts/run_experiments.py --only q4 # one section: q1 q3 q4 q6 q7
 cd report && latexmk -pdf main.tex
 ```
 
-All randomness comes from `numpy.random.default_rng` seeded with `experiments.SEED = 2026`
+All randomness comes from `numpy.random.default_rng` seeded with `experiments.SEED = 2137`
 (per-experiment sub-seeds are derived from it). Raw results go to `results/`, LaTeX tables to
 `report/tables/` and figures to `report/figures/`.
+
+## Presentation
+
+`presentation/index.html` is a 10–15 min Polish talk (reveal.js and KaTeX are bundled in
+`presentation/vendor/`, so it works offline). Open it directly in a browser; press `S` for
+speaker notes with timings. It includes a live JS Hopfield demo (Hebb / Oja / projection, sync /
+async) and reads figures from `report/figures/`. The patterns, Oja weights and key numbers come
+from `results/`; regenerate them after rerunning experiments with
+
+```sh
+uv run python scripts/export_presentation_data.py   # writes presentation/data/patterns.js
+```
 
 ## Layout
 
@@ -58,3 +70,4 @@ All randomness comes from `numpy.random.default_rng` seeded with `experiments.SE
 * `scripts/`: experiment runner and data download.
 * `tests/`: `uv run pytest`.
 * `report/`: LaTeX report (Polish).
+* `presentation/`: reveal.js slides (Polish) with a live demo.

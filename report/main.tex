@@ -41,10 +41,11 @@
 \newcommand{\vw}{\mathbf{w}}
 \newcommand{\vv}{\mathbf{v}}
 \newcommand{\tabfile}[1]{\resizebox{\linewidth}{!}{\input{tables/#1}}}
+\setlength{\emergencystretch}{3em}
 
 \title{Pamięć skojarzeniowa z użyciem sieci Hopfielda\\
 \large Sieci neuronowe, projekt 2}
-\author{[Imię i nazwisko]}
+\author{Marcin Falkowski \\ Antoni Kingston}
 \date{listopad 2026}
 
 \begin{document}
@@ -56,15 +57,15 @@ jako minima funkcji energii i potrafi odtworzyć wzorzec z jego uszkodzonej wers
 zaimplementowano taką sieć o dowolnej liczbie neuronów, z~dynamiką synchroniczną
 i~asynchroniczną oraz wizualizacją kolejnych kroków zbiegania, uczoną regułą Hebba i~regułą
 Oji, a~jako punkt odniesienia także regułą delta/projekcyjną (pseudoodwrotności). Na ośmiu
-dostarczonych zbiorach bitmap reguła Hebba utrwala od 0 do 5 wzorców w~zbiorze, przy czym
-liczbę niestabilnych wzorców w~każdym zbiorze dokładnie przewiduje analiza
-\emph{przesłuchu} (ang.~\emph{crosstalk}); decydujące okazują się korelacje między wzorcami,
-a~nie ich liczba. Reguła Oji nie utrwala żadnego wzorca: zgodnie z~teorią każdy wiersz macierzy
-wag dąży do pierwszej składowej głównej zbioru, więc sieć ma de~facto tylko dwa atraktory.
-Reguła projekcyjna utrwala wszystkie wzorce we wszystkich zbiorach i~odtwarza je przy
-uszkodzeniu do 30--40\% pikseli. Pokazano, że zbiór 25$\times$50 różni się od 25$\times$25
-jedynie stałym, wspólnym dla wszystkich wzorców blokiem, który podnosi średnie nakładanie
-wzorców z~0{,}14 do 0{,}57 i~niszczy pamięć hebbowską. Skonstruowano zbiór 19 wzorców 5$\times$5
+dostarczonych zbiorach bitmap reguła Hebba utrwaliła od 0 do 5 wzorców w~zbiorze, przy czym
+liczbę niestabilnych wzorców w~każdym zbiorze wyjaśnia analiza \emph{przesłuchu}
+(ang.~\emph{crosstalk}); czynnikiem decydującym okazały się korelacje między wzorcami,
+a~nie ich liczba. Reguła Oji nie utrwaliła żadnego wzorca: zgodnie z~teorią każdy wiersz
+macierzy wag dąży do pierwszej składowej głównej zbioru, w~wyniku czego sieć ma de~facto tylko
+dwa atraktory. Reguła projekcyjna utrwaliła wszystkie wzorce we wszystkich zbiorach
+i~odtwarzała je przy uszkodzeniu do 30--40\% pikseli. Wykazano, że zbiór 25$\times$50 różni
+się od 25$\times$25 jedynie stałym, wspólnym dla wszystkich wzorców blokiem, który podnosi
+średnie nakładanie wzorców z~0{,}14 do 0{,}57 i~uniemożliwia zapamiętanie ich regułą Hebba. Skonstruowano zbiór 19 wzorców 5$\times$5
 stabilnych przy regule Hebba, przykład oscylacji w~trybie synchronicznym oraz przeprowadzono
 eksperyment na zdjęciach kotów 200$\times$300 ($N=60\,000$), korzystając z~niskorzędowej
 reprezentacji wag.
@@ -76,28 +77,28 @@ reprezentacji wag.
 \section{Wstęp}
 
 \emph{Pamięć skojarzeniowa} (adresowana zawartością) to układ, który po podaniu
-niepełnej lub zaszumionej wersji zapamiętanego obiektu zwraca obiekt oryginalny --- tak jak
-człowiek rozpoznaje znajomą twarz na nieostrym zdjęciu. W~tym projekcie obiektami są czarno-białe
-bitmapy: zwierzęta, litery, proste figury, a~na końcu zdjęcia kotów. Zadanie polega na:
+niepełnej lub zaszumionej wersji zapamiętanego obiektu zwraca obiekt oryginalny. W~niniejszej
+pracy obiektami są czarno-białe bitmapy: sylwetki zwierząt, litery, proste figury geometryczne
+oraz zdjęcia kotów. Celem pracy było:
 \begin{enumerate}
-  \item zbudowaniu sieci Hopfielda~\cite{hopfield1982} o~konfigurowalnej liczbie neuronów (jeden
-  neuron na piksel), symulowanej synchronicznie i~asynchronicznie, z~podglądem stanu sieci jako
-  bitmapy w~kolejnych krokach;
-  \item nauczeniu jej dwiema metodami: regułą Hebba~\cite{hebb1949} i~regułą
+  \item zaimplementowanie sieci Hopfielda~\cite{hopfield1982} o~konfigurowalnej liczbie
+  neuronów (jeden neuron na piksel), z~dynamiką synchroniczną i~asynchroniczną oraz wizualizacją
+  stanu sieci w~postaci bitmapy w~kolejnych krokach;
+  \item uczenie sieci dwiema metodami: regułą Hebba~\cite{hebb1949} i~regułą
   Oji~\cite{oja1982};
-  \item zbadaniu, które z~dostarczonych zbiorów wzorców sieć zapamiętuje poprawnie (wzorce
-  uczące są stanami stabilnymi), dlaczego niektóre nie są stabilne, jak dobrze sieć odtwarza
-  wzorce z~uszkodzonego wejścia, jak reaguje na wejście losowe, oraz na skonstruowaniu
-  własnego zbioru 5$\times$5 z~samymi stabilnymi wzorcami i~przykładu oscylacji.
+  \item analiza stabilności wzorców uczących w~dostarczonych zbiorach i~jej uwarunkowań,
+  zdolności sieci do odtwarzania wzorców z~uszkodzonego wejścia, dynamiki sieci dla losowych
+  stanów początkowych, a~także konstrukcja możliwie licznego zbioru stabilnych wzorców
+  5$\times$5 i~przykładu oscylacji.
 \end{enumerate}
-Ponieważ reguła Oji (w~postaci z~literatury) okazała się praktycznie niezdolna do
+Ponieważ reguła Oji w~postaci znanej z~literatury okazała się praktycznie niezdolna do
 przechowywania więcej niż jednego wzorca, jako punkt odniesienia dodano regułę delta i~jej
-granicę --- regułę projekcyjną~\cite{personnaz1985}. Pozwala to oddzielić ograniczenia samej
+granicę --- regułę projekcyjną~\cite{personnaz1985}. Umożliwiło to oddzielenie ograniczeń samej
 architektury od ograniczeń reguły uczenia.
 
 Kod (Python, NumPy) wraz z~instrukcją odtworzenia wszystkich wyników znajduje się
-w~repozytorium projektu; wszystkie eksperymenty losowe korzystają z~ziarna 2026
-(\cref{sec:impl}).
+w~repozytorium projektu; we wszystkich eksperymentach losowych użyto ziarna 2137
+(zob. punkt~\ref{sec:impl}).
 
 % =====================================================================
 \section{Sieć Hopfielda}
@@ -116,19 +117,20 @@ a~reguła aktualizacji to
   \label{eq:update}
 \end{equation}
 Konwencja dla $h_i=0$ ma znaczenie praktyczne: przy regule Hebba pola są wielokrotnościami
-$1/N$ i~remisy zdarzają się często. Funkcja $\sgn$ z~NumPy zwraca wtedy $0$, co wprowadza
-do sieci nieprawidłowy stan; w~implementacji remis (z~tolerancją $10^{-9}$ na błędy
-zaokrągleń) pozostawia neuron bez zmian.
+$1/N$, więc remisy występują często. Funkcja $\sgn$ z~biblioteki NumPy zwraca wówczas $0$,
+co wprowadza do sieci niedozwolony stan; w~implementacji remis (z~tolerancją $10^{-9}$ na błędy
+zaokrągleń) pozostawiał neuron bez zmian.
 
 \subsection{Funkcja energii i dynamika asynchroniczna}
-Hopfield~\cite{hopfield1982} zauważył, że sieć ma funkcję Lapunowa (później uogólnioną na
-neurony o~ciągłej odpowiedzi~\cite{hopfield1984})
+Hopfield~\cite{hopfield1982} wykazał, że każdemu stanowi sieci można przyporządkować wielkość
+o~charakterze energii (funkcję Lapunowa; uogólnienie na neurony o~ciągłej odpowiedzi
+podano w~\cite{hopfield1984})
 \begin{equation}
   E(\vs) = -\frac12 \sum_{i,j} w_{ij} s_i s_j = -\frac12\,\vs^\top W \vs .
   \label{eq:energy}
 \end{equation}
-W~trybie \textbf{asynchronicznym} w~jednej chwili aktualizowany jest jeden neuron (w~implementacji:
-każdy neuron raz na \emph{sweep}, w~losowej kolejności). Jeśli neuron $i$ zmienia stan
+W~trybie \textbf{asynchronicznym} w~jednej chwili aktualizowany jest jeden neuron (w~implementacji
+każdy neuron był aktualizowany raz na przebieg, w~losowej kolejności). Jeśli neuron $i$ zmienia stan
 o~$\Delta s_i=\pm2$, to dzięki symetrii i~$w_{ii}=0$
 \begin{equation}
   \Delta E = -\Delta s_i \, h_i \le 0,
@@ -141,26 +143,26 @@ $\vx^1,\dots,\vx^P$ były minimami energii, a~ich otoczenia --- \emph{basenami p
 \subsection{Dynamika synchroniczna i oscylacje}
 W~trybie \textbf{synchronicznym} wszystkie neurony są aktualizowane jednocześnie:
 $\vs(t+1)=\sgn(W\vs(t))$. Funkcja \eqref{eq:energy} nie musi wtedy maleć, ale maleje funkcja
-dwukrokowa $L(t)=-\vs(t+1)^\top W\vs(t)$; wynika z~tego, że dla symetrycznej $W$ sieć
+dwukrokowa $L(t)=-\vs(t+1)^\top W\vs(t)$; wynika to z~tego, że dla symetrycznej $W$ sieć
 synchroniczna kończy w~punkcie stałym albo w~\emph{cyklu długości 2}, nigdy w~dłuższym
-cyklu~\cite{goles1985,bruck1990}. W~implementacji wykrywane są oba przypadki, a~symulacja jest
-dodatkowo przerywana po zadanej liczbie kroków.
+cyklu~\cite{goles1985,bruck1990}. W~implementacji wykrywano oba przypadki, a~symulację
+dodatkowo przerywano po zadanej liczbie kroków.
 
 \subsection{Stany fałszywe}
 Poza wzorcami uczącymi sieć ma też inne minima energii~\cite{amit1985spin,hertz1991}:
 \begin{itemize}
   \item \emph{negatywy} $-\vx^\mu$ --- energia \eqref{eq:energy} jest parzysta, $E(-\vs)=E(\vs)$,
-  więc każdy zapamiętany wzorzec ,,przynosi'' też swój negatyw;
-  \item \emph{stany mieszane}, np. $\sgn(\vx^1+\vx^2+\vx^3)$, mające duże nakładanie z~kilkoma
+  więc wraz z~każdym wzorcem stabilny jest również jego negatyw;
+  \item \emph{stany mieszane}, np. $\sgn(\vx^1+\vx^2+\vx^3)$, o~dużym nakładaniu z~kilkoma
   wzorcami jednocześnie;
-  \item przy dużym obciążeniu --- stany ,,szkła spinowego'' niezwiązane z~żadnym wzorcem.
+  \item przy dużym obciążeniu --- stany szkła spinowego, nieskorelowane z~żadnym wzorcem.
 \end{itemize}
-W~eksperymentach stan końcowy klasyfikujemy jako: oryginał, negatyw, inny wzorzec (lub jego
+W~eksperymentach stan końcowy klasyfikowano jako: oryginał, negatyw, inny wzorzec (lub jego
 negatyw), stan fałszywy, cykl lub brak zbieżności. Miarą podobieństwa jest
 \emph{nakładanie} $m^\mu(\vs)=\frac1N\vx^\mu\cdot\vs\in[-1,1]$.
 
 % =====================================================================
-\section{Reguły uczenia i dlaczego działają}
+\section{Reguły uczenia: podstawy teoretyczne}
 \label{sec:rules}
 
 Niech $X\in\{-1,1\}^{P\times N}$ zawiera wzorce w~wierszach, a~$m_{\mu\nu}=\frac1N
@@ -177,17 +179,19 @@ wzmacnia --- prowadzi do wag będących korelacjami pikseli we wzorcach~\cite{ho
 Reguła jest jednoprzebiegowa i~lokalna (waga zależy tylko od stanów dwóch neuronów),
 a~kolejne wzorce można dodawać przyrostowo.
 
-\paragraph{Dlaczego działa: sygnał i przesłuch.}
-Pole lokalne neuronu $i$, gdy sieć jest w~stanie $\vx^\nu$, rozkłada się na
+\paragraph{Rozkład pola lokalnego: sygnał i przesłuch.}
+Pole lokalne neuronu $i$ w~stanie $\vx^\nu$ rozkłada się na
 \begin{equation}
   h_i^\nu = \underbrace{\Bigl(1-\tfrac PN\Bigr) x_i^\nu}_{\text{sygnał}}
   + \underbrace{\sum_{\mu\ne\nu} x_i^\mu\, m_{\mu\nu}}_{\text{przesłuch}} .
 \end{equation}
-Pierwszy składnik ,,popycha'' neuron w~stronę właściwego stanu. Drugi składnik --- przesłuch od
-pozostałych wzorców --- jest mały, jeśli wzorce są prawie ortogonalne ($m_{\mu\nu}\approx0$).
-Definiując $C_i^\nu=-x_i^\nu\sum_{\mu\ne\nu}x_i^\mu m_{\mu\nu}$~\cite{hertz1991}, piksel
-$i$ wzorca $\nu$ jest \textbf{niestabilny dokładnie wtedy, gdy} $C_i^\nu > 1-P/N$. Ten warunek
-pozwala przewidzieć stabilność każdego wzorca bez symulacji. Wzorzec jest stanem stabilnym,
+Pierwszy składnik ma znak zgodny z~$x_i^\nu$, a~więc stabilizuje wzorzec. Drugi składnik
+--- przesłuch od pozostałych wzorców --- jest mały, jeśli wzorce są prawie ortogonalne
+($m_{\mu\nu}\approx0$). Po wprowadzeniu oznaczenia
+$C_i^\nu=-x_i^\nu\sum_{\mu\ne\nu}x_i^\mu m_{\mu\nu}$~\cite{hertz1991} piksel $i$ wzorca $\nu$
+jest \textbf{niestabilny wtedy i~tylko wtedy, gdy} $C_i^\nu > 1-P/N$. Warunek ten jest
+dokładny, umożliwia więc wyznaczenie stabilności każdego wzorca bez symulacji dynamiki,
+a~przede wszystkim wskazuje, które pary wzorców i~które piksele odpowiadają za niestabilność. Wzorzec jest stanem stabilnym,
 gdy wszystkie jego piksele są stabilne. W~pobliżu wzorca energia wynosi w~przybliżeniu
 $E\approx-\frac N2\sum_\mu (m^\mu)^2$, więc minima leżą tam, gdzie stan ma duże nakładanie
 z~jednym wzorcem.
@@ -202,27 +206,29 @@ błędu pojedynczego piksela wynosi
 \end{equation}
 np. 0{,}36\% dla $P/N=0{,}138$~\cite{hertz1991}. Dokładna analiza metodami mechaniki
 statystycznej~\cite{amit1985,amit1987} daje krytyczne obciążenie $\alpha_c=P/N\approx0{,}138$,
-powyżej którego stany bliskie wzorcom przestają istnieć (,,katastrofa zapominania''),
-a~żądanie, by \emph{wszystkie} wzorce były bezbłędnie stabilne, daje znacznie mniej,
-$P\lesssim N/(4\ln N)$~\cite{mceliece1987}. Te wyniki dotyczą wzorców nieskorelowanych:
-korelacje (wzorce podobne, niezrównoważona liczba czarnych i~białych pikseli) zwiększają
-przesłuch i~zmniejszają pojemność~\cite{lowe1998}, co okaże się kluczowe dla dostarczonych
-zbiorów.
+powyżej którego stany bliskie wzorcom przestają istnieć (katastrofa zapominania),
+natomiast wymaganie, by \emph{wszystkie} wzorce były bezbłędnie stabilne, prowadzi do znacznie
+mniejszej pojemności, $P\lesssim N/(4\ln N)$~\cite{mceliece1987}. Wyniki te dotyczą wzorców
+nieskorelowanych: korelacje (podobieństwo wzorców, niezrównoważona liczba czarnych i~białych
+pikseli) zwiększają przesłuch i~zmniejszają pojemność~\cite{lowe1998}, co --- jak pokazano
+w~punkcie~\ref{sec:q2} --- ma decydujące znaczenie dla dostarczonych zbiorów.
 
 \subsection{Reguła Oji}
 Oja~\cite{oja1982} rozważał pojedynczy liniowy neuron $y=\vw^\top\vx$ uczony regułą Hebba
-z~członem ,,zapominania'':
+uzupełnioną o~człon zapominania:
 \begin{equation}
   \Delta\vw = \eta\, y\,(\vx - y\,\vw).
   \label{eq:oja}
 \end{equation}
-Czysta reguła Hebba $\Delta\vw=\eta y\vx$ powoduje nieograniczony wzrost wag; człon $-\eta y^2\vw$
-jest pierwszym wyrazem rozwinięcia normalizacji $\vw\leftarrow\vw/\lVert\vw\rVert$ i~utrzymuje
-$\lVert\vw\rVert\to1$. Uśredniając \eqref{eq:oja} po wzorcach dostajemy
+Przy $y=\vw^\top\vx$ i~wielokrotnej prezentacji wzorców czysta reguła Hebba
+$\Delta\vw=\eta y\vx$ prowadzi do nieograniczonego wzrostu wag, $\lVert\vw\rVert\sim
+(1+\eta\lambda_1)^t$ dla dowolnego $\eta>0$; człon $-\eta y^2\vw$ jest pierwszym wyrazem
+rozwinięcia normalizacji $\vw\leftarrow\vw/\lVert\vw\rVert$ i~zapewnia $\lVert\vw\rVert\to1$.
+Uśrednienie \eqref{eq:oja} po wzorcach daje
 $\mathbb E[\Delta\vw]=\eta\,(C\vw-(\vw^\top C\vw)\vw)$, gdzie $C=\frac1P X^\top X$ jest macierzą
 korelacji. Punktami stałymi są unormowane wektory własne $C$, a~jedynym stabilnym jest
 \textbf{pierwsza składowa główna} $\vv_1$~\cite{oja1982}. Reguła Oji jest więc
-\emph{neuronowym algorytmem PCA}: działa, bo wyszukuje kierunek największej wariancji danych.
+\emph{neuronowym algorytmem PCA}: wyznacza kierunek największej wariancji danych.
 
 \paragraph{Zastosowanie w~sieci Hopfielda.}
 W~sieci każdy neuron $i$ ma wektor wag $\vw_i$ (wiersz $W$) i~wyjście $y_i=\vw_i^\top\vx$; reguła
@@ -230,22 +236,22 @@ W~sieci każdy neuron $i$ ma wektor wag $\vw_i$ (wiersz $W$) i~wyjście $y_i=\vw
 \begin{equation}
   \Delta w_{ij} = \eta\, y_i\,(x_j - y_i\, w_{ij}), \qquad \vec y = W\vx .
 \end{equation}
-Po każdej aktualizacji zerujemy przekątną i~symetryzujemy przyrost, by zachować założenia
-z~\cref{sec:model}. Wagi inicjalizujemy regułą Hebba (lub losowo), a~wzorce podajemy
-w~losowej kolejności przez 100 epok. Krok uczenia musi spełniać $\eta N\lesssim1$: jedna
+Po każdej aktualizacji zerowano przekątną i~symetryzowano przyrost, aby zachować założenia
+z~punktu~\ref{sec:model}. Wagi inicjalizowano regułą Hebba (lub losowo), a~wzorce podawano
+w~losowej kolejności przez 100 epok. Krok uczenia musi spełniać $\eta N\lesssim1$: pojedyncza
 aktualizacja zmienia $y_i$ o~ok. $\eta\lVert\vx\rVert^2 y_i=\eta N y_i$, więc dla większych
-$\eta$ wagi rozbiegają się (co obserwujemy dla $\eta=3/N$). Przyjęto $\eta=0{,}1/N$.
+$\eta$ wagi są rozbieżne (co zaobserwowano dla $\eta=3/N$). Przyjęto $\eta=0{,}1/N$.
 
-\paragraph{Wniosek z~teorii.}
+\paragraph{Konsekwencje dla pamięci skojarzeniowej.}
 Skoro \emph{każdy} wiersz dąży do tego samego wektora $\pm\vv_1$, macierz wag dąży do macierzy
 rzędu 1, $W\approx c\,\vv_1\vv_1^\top$. Taka sieć ma tylko dwa atraktory, $\pm\sgn(\vv_1)$,
 niezależnie od liczby wzorców uczących: reguła Oji w~tej postaci \emph{nie jest} regułą
 pamięci skojarzeniowej dla $P>1$. Uogólnienia (reguła podprzestrzeni Oji~\cite{oja1989},
 reguła Sangera~\cite{sanger1989}) wyznaczają $P$ pierwszych składowych głównych, a~rzutowanie
-na tę podprzestrzeń jest właśnie regułą projekcyjną z~następnego punktu. Ten wniosek
-weryfikujemy eksperymentalnie w~\cref{sec:q1}.
+na tę podprzestrzeń jest właśnie regułą projekcyjną opisaną w~następnym punkcie. Wniosek ten
+zweryfikowano eksperymentalnie w~punkcie~\ref{sec:q1}.
 
-\subsection{Punkt odniesienia: reguła delta i reguła projekcyjna}
+\subsection{Reguły referencyjne: reguła delta i reguła projekcyjna}
 Reguła projekcyjna (pseudoodwrotności)~\cite{personnaz1985,kanter1987}
 \begin{equation}
   W = X^\top (X X^\top)^{+} X, \qquad w_{ii}\leftarrow0,
@@ -254,7 +260,7 @@ to rzut ortogonalny na podprzestrzeń rozpiętą przez wzorce. Dla każdego wzor
 więc przesłuch znika \emph{niezależnie od korelacji}. Po wyzerowaniu przekątnej
 $h_i^\mu=(1-d_i)x_i^\mu$, gdzie $d_i\in[0,1]$ to element przekątnej rzutu, więc każdy zbiór
 $P<N$ liniowo niezależnych wzorców jest stabilny (dla $P=N$ rzut to $I$, a~po wyzerowaniu
-przekątnej $W=0$). Ceną jest nielokalność: potrzebne jest odwrócenie macierzy nakładań.
+przekątnej $W=0$). Ceną jest nielokalność: reguła wymaga odwrócenia macierzy nakładań.
 Lokalną, iteracyjną wersją jest reguła delta (Widrowa--Hoffa)~\cite{widrow1960}
 $\Delta W=\frac\eta N(\vx-W\vx)\vx^\top$, minimalizująca $\sum_\mu\lVert\vx^\mu-W\vx^\mu\rVert^2$;
 startując od $W=0$ zbiega do reguły projekcyjnej~\cite{diederich1987}.
@@ -263,6 +269,8 @@ startując od $W=0$ zbiega do reguły projekcyjnej~\cite{diederich1987}.
 \section{Implementacja}
 \label{sec:impl}
 
+Sieć zaimplementowano w~języku Python z~użyciem biblioteki NumPy. Kod podzielono na
+następujące moduły:
 \begin{itemize}
   \item \texttt{src/hopfield.py} --- klasa bazowa \texttt{HopfieldBase} (dynamika synchroniczna
   i~asynchroniczna, wykrywanie punktów stałych i~cykli, energia, nakładania, marginesy
@@ -271,56 +279,61 @@ startując od $W=0$ zbiega do reguły projekcyjnej~\cite{diederich1987}.
     \item \texttt{Hopfield} --- jawna macierz $N\times N$ i~reguły
     \texttt{hebbian\_train}, \texttt{oja\_train}, \texttt{delta\_train},
     \texttt{projection\_train};
-    \item \texttt{LowRankHopfield} --- dla dużych bitmap. Obie reguły Hebba i~projekcyjna mają postać
-    $W=A^\top X-\operatorname{diag}(\vec d)$ ($A=X/N$ lub $A=(XX^\top)^+X$), więc pole lokalne
-    liczymy jako $\vh=A^\top(X\vs)-\vec d\odot\vs$ przez $P$ nakładań $X\vs$, nie budując $W$.
-    Pamięć spada z~$O(N^2)$ do $O(PN)$ --- dla $N=60\,000$ macierz wag zajęłaby 14{,}4\,GB
-    (float32), a~tu kilka MB. W~trybie asynchronicznym wektor $X\vs$ jest aktualizowany
-    przyrostowo przy zmianie jednego neuronu, więc aktualizacja kosztuje $O(P)$.
+    \item \texttt{LowRankHopfield} --- dla dużych bitmap. Zarówno reguła Hebba, jak
+    i~projekcyjna mają postać $W=A^\top X-\operatorname{diag}(\vec d)$ ($A=X/N$ lub
+    $A=(XX^\top)^+X$), dlatego pole lokalne obliczano jako $\vh=A^\top(X\vs)-\vec d\odot\vs$
+    za pośrednictwem $P$ nakładań $X\vs$, bez jawnego tworzenia $W$. Zapotrzebowanie na pamięć
+    maleje z~$O(N^2)$ do $O(PN)$. W~trybie asynchronicznym wektor $X\vs$ aktualizowano
+    przyrostowo po zmianie stanu jednego neuronu, więc koszt aktualizacji wynosi $O(P)$.
   \end{itemize}
   \item \texttt{src/hopfield\_datasets.py} --- wczytywanie zbiorów (w~nazwie pliku najpierw
   jest szerokość, potem wysokość, np. \texttt{animals-14x9} to 9 wierszy i~14 kolumn),
   binaryzacja zdjęć (skala szarości, przycięcie do proporcji, skalowanie, próg = mediana),
   statystyki zbiorów (nakładania, przesłuch).
-  \item \texttt{src/experiments.py} i~\texttt{scripts/run\_experiments.py} --- jedna funkcja na
-  każde pytanie z~zadania; wyniki trafiają do \texttt{results/*.csv}, tabele i~rysunki do
-  \texttt{report/}. Ziarno globalne \texttt{SEED = 2026}, ziarna poszczególnych eksperymentów
-  są z~niego wyprowadzane, więc ponowne uruchomienie daje identyczne liczby.
+  \item \texttt{src/experiments.py} i~\texttt{scripts/run\_experiments.py} --- procedury
+  eksperymentów opisanych w~punkcie~\ref{sec:results}; wyniki zapisywano do
+  \texttt{results/*.csv}, a~tabele i~rysunki do katalogu \texttt{report/}. Ziarna
+  poszczególnych eksperymentów wyprowadzano z~ziarna globalnego \texttt{SEED = 2137}, dzięki
+  czemu ponowne uruchomienie daje identyczne wyniki.
   \item \texttt{notebooks/demo.ipynb} --- interaktywna prezentacja: wybór zbioru, reguły, trybu
-  i~poziomu szumu, suwak po kolejnych krokach z~wykresem energii, sieć o~dowolnych wymiarach,
-  eksport animacji GIF. Krok asynchroniczny można podzielić na kilka klatek
-  (\texttt{frames\_per\_sweep}), by obserwować stopniowe zmiany (\cref{fig:convergence}).
-  \item \texttt{tests/} --- testy jednostkowe (m.in.: energia w~trybie asynchronicznym nie rośnie
-  dla żadnej reguły; wykrywanie cyklu; zgodność \texttt{LowRankHopfield} z~wersją gęstą co do
-  pól, energii i~całych trajektorii; obsługa remisów; poprawność wymiarów zbiorów).
+  i~poziomu szumu, podgląd kolejnych kroków wraz z~wykresem energii, sieć o~dowolnych wymiarach,
+  eksport animacji GIF. Przebieg asynchroniczny można podzielić na kilka klatek
+  (\texttt{frames\_per\_sweep}), co umożliwia obserwację stopniowych zmian
+  (\cref{fig:convergence}).
+  \item \texttt{tests/} --- testy jednostkowe, które weryfikowały m.in.: brak wzrostu energii
+  w~trybie asynchronicznym dla każdej reguły, wykrywanie cykli, zgodność
+  \texttt{LowRankHopfield} z~wersją gęstą (pola, energia, całe trajektorie), obsługę remisów
+  oraz poprawność wymiarów zbiorów.
 \end{itemize}
-Liczba neuronów to iloczyn wymiarów bitmapy podawany przy tworzeniu sieci, np.
-\texttt{Hopfield((9, 14), patterns)}; symulację uruchamia
-\texttt{net.run(x, mode="sync"|"async")}, zwracając stan końcowy, historię stanów
-i~informację o~zbieżności lub cyklu.
+Liczba neuronów jest iloczynem wymiarów bitmapy, które podaje się przy tworzeniu sieci,
+np.~\texttt{Hopfield((9, 14), patterns)}; symulację uruchamia metoda
+\texttt{net.run(x, mode="sync"|"async")}, która zwraca stan końcowy, historię stanów
+oraz informację o~zbieżności lub cyklu.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\linewidth]{convergence_sync}\\[2mm]
+  \includegraphics[width=0.45\linewidth]{convergence_sync}\\[2mm]
   \includegraphics[width=\linewidth]{convergence_async}
   \caption{Odtwarzanie litery z~OCRA-12x30-cut (40\% odwróconych pikseli, reguła projekcyjna).
-  Górny rząd: tryb synchroniczny (zbieżność w~4 krokach). Dolne rzędy: tryb asynchroniczny,
+  Górny rząd: tryb synchroniczny (zbieżność w~2 krokach). Dolne rzędy: tryb asynchroniczny,
   4 klatki na jeden przebieg po wszystkich neuronach. Energia w~trybie asynchronicznym maleje
-  monotonicznie.}
+  monotonicznie; w~tym przykładzie malała również w~trybie synchronicznym, choć w~ogólności
+  nie jest to zagwarantowane.}
   \label{fig:convergence}
 \end{figure}
 
 % =====================================================================
 \section{Eksperymenty i wyniki}
+\label{sec:results}
 
 \subsection{Zbiory danych}
 \Cref{tab:datasets} opisuje dostarczone zbiory. Poza liczbą wzorców $P$ i~neuronów $N$ podano
 średnią wartość piksela (0 oznacza tyle samo pikseli czarnych co białych) oraz średnie
 i~maksymalne $|m_{\mu\nu}|$ między różnymi wzorcami. Wszystkie zbiory mają obciążenie
-$P/N\lesssim0{,}10$, czyli \emph{poniżej} granicy $0{,}138$ dla wzorców losowych --- mimo to większość
-z~nich nie jest poprawnie zapamiętywana regułą Hebba. Wyjaśnieniem są wysokie nakładania:
-np. litery (\texttt{letters-14x20}, \texttt{letters-abc-8x12}) mają średnie $|m|$ ok.
-0{,}7--0{,}8, bo w~większości składają się z~tego samego białego tła.
+$P/N\lesssim0{,}10$, a~więc \emph{poniżej} granicy $0{,}138$ dla wzorców losowych --- mimo to
+większość z~nich nie została poprawnie zapamiętana regułą Hebba. Przyczyną są wysokie
+nakładania: np. litery (\texttt{letters-14x20}, \texttt{letters-abc-8x12}) mają średnie $|m|$
+ok. 0{,}7--0{,}8, ponieważ w~większości składają się z~tego samego białego tła.
 
 \begin{table}[H]
   \centering
@@ -341,13 +354,13 @@ np. litery (\texttt{letters-14x20}, \texttt{letters-abc-8x12}) mają średnie $|
 \end{figure}
 
 % ---------------------------------------------------------------------
-\subsection{Skuteczność reguł uczenia i liczba stabilnych wzorców}
+\subsection{Stabilność wzorców uczących}
 \label{sec:q1}
 
-\Cref{tab:stability} podaje liczbę wzorców uczących będących stanami stabilnymi
-\eqref{eq:update}. Kolumna ,,Hebb (ścisła)'' wymaga $x_i^\mu h_i^\mu>0$ dla wszystkich pikseli
-(bez remisów), a~,,przesłuch'' to liczba wzorców stabilnych \emph{przewidziana} z~warunku
-$C_i^\mu\le1-P/N$, bez symulacji.
+\Cref{tab:stability} zawiera liczbę wzorców uczących będących stanami stabilnymi
+\eqref{eq:update}. Kolumna \enquote{Hebb (ścisła)} wymaga $x_i^\mu h_i^\mu>0$ dla wszystkich
+pikseli (bez remisów), a~kolumna \enquote{przesłuch} --- liczbę wzorców stabilnych wyznaczoną
+analitycznie z~warunku $C_i^\mu\le1-P/N$, bez symulacji dynamiki.
 
 \begin{table}[H]
   \centering
@@ -356,44 +369,47 @@ $C_i^\mu\le1-P/N$, bez symulacji.
   \tabfile{stability}
 \end{table}
 
-\paragraph{Hebb.} Reguła Hebba zapamiętuje poprawnie jedynie \texttt{large-25x25} (5 z~6)
-i~częściowo \texttt{small-7x7} (3 z~5) oraz \texttt{animals-14x9} (2 z~6). W~pozostałych
-zbiorach stabilny jest co najwyżej jeden wzorzec. Przewidywanie z~przesłuchu zgadza się
-z~symulacją w~\emph{każdym} zbiorze, więc przyczyną niestabilności jest wyłącznie przesłuch
---- a~ten jest duży, bo wzorce są silnie skorelowane (\cref{tab:datasets}). Dla porównania,
-\cref{fig:capacity} pokazuje tę samą regułę na wzorcach losowych: odsetek błędnych pikseli
-pokrywa się ze wzorem \eqref{eq:perr}, a~wszystkie wzorce są stabilne do $P/N\approx0{,}05$--$0{,}08$.
-Dostarczone zbiory mają podobne lub mniejsze obciążenie, ale korelacje działają jak
-wielokrotnie większa liczba wzorców.
+\paragraph{Reguła Hebba.} Reguła Hebba poprawnie zapamiętała jedynie zbiór \texttt{large-25x25}
+(5 z~6 wzorców), a~częściowo \texttt{small-7x7} (3 z~5) i~\texttt{animals-14x9} (2 z~6).
+W~pozostałych zbiorach stabilny był co najwyżej jeden wzorzec. Wyniki symulacji pokrywają się
+z~wartościami wyznaczonymi z~warunku na przesłuch we \emph{wszystkich} zbiorach, czego należało
+oczekiwać, ponieważ warunek ten jest dokładny; istotne jest natomiast, że rozkład pola lokalnego
+wskazuje przyczynę niestabilności: duży przesłuch wynikający z~silnych korelacji wzorców
+(\cref{tab:datasets}). Dla porównania na \cref{fig:capacity} przedstawiono tę samą regułę dla
+wzorców losowych: odsetek błędnych pikseli jest zgodny ze wzorem \eqref{eq:perr}, a~wszystkie
+wzorce pozostają stabilne do $P/N\approx0{,}05$--$0{,}08$. Dostarczone zbiory mają podobne
+lub mniejsze obciążenie, jednak korelacje działają jak wielokrotnie większa liczba wzorców.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{random_capacity}
   \caption{Reguła Hebba na losowych wzorcach ($N=100,400$, 20 powtórzeń). Lewo: odsetek
   niestabilnych pikseli i~wzór \eqref{eq:perr}; środek: odsetek wzorców stabilnych; prawo:
-  nakładanie z~wzorcem po zbiegnięciu startując z~niego (asynchronicznie). Linia kropkowana:
+  nakładanie stanu końcowego z~wzorcem, od którego rozpoczęto dynamikę asynchroniczną. Linia kropkowana:
   $P/N=0{,}138$.}
   \label{fig:capacity}
 \end{figure}
 
-\paragraph{Oja.} Reguła Oji nie utrwala żadnego wzorca w~żadnym zbiorze.
-\Cref{fig:oja} pokazuje przebieg uczenia: startując z~wag Hebba, liczba stabilnych wzorców
-\emph{maleje} do zera, z~chwilowymi wahaniami (szybciej dla większego $\eta$), a~średni $|\cos|$ kąta między wierszami $W$
-a~pierwszą składową główną $\vv_1$ rośnie do 0{,}8--0{,}9. Startując z~wag losowych sieć nigdy
-nie ma stabilnych wzorców. Widmo wartości osobliwych (\cref{fig:spectrum}) potwierdza teorię:
-po uczeniu regułą Oji jedna wartość osobliwa dominuje (macierz jest praktycznie rzędu 1),
+\paragraph{Reguła Oji.} Reguła Oji nie utrwaliła żadnego wzorca w~żadnym zbiorze.
+Przebieg uczenia przedstawiono na \cref{fig:oja}: przy inicjalizacji wagami Hebba liczba
+stabilnych wzorców \emph{malała} do zera, z~chwilowymi wahaniami (szybciej dla większego
+$\eta$; jedynie przy najmniejszym kroku $0{,}01/N$ w~\texttt{large-25x25} po 100 epokach
+pozostał jeden stabilny wzorzec), a~średni $|\cos|$ kąta między wierszami $W$ a~pierwszą
+składową główną $\vv_1$ rósł do 0{,}75--0{,}94. Przy inicjalizacji losowej sieć w~żadnej
+epoce nie miała stabilnych wzorców. Widmo wartości osobliwych (\cref{fig:spectrum}) potwierdza przewidywania teoretyczne:
+po uczeniu regułą Oji dominuje jedna wartość osobliwa (macierz jest praktycznie rzędu 1),
 podczas gdy wagi Hebba i~projekcyjne mają $P=6$ istotnych wartości --- po jednej na wzorzec.
-Konsekwencją są dokładnie dwa atraktory (\cref{sec:q6}). Pełna zbieżność do $\vv_1$ jest
-zaburzona przez wymuszone $w_{ii}=0$ i~symetryzację, ale nie zmienia to wniosku.
-Nie jest to też kwestia doboru parametrów: przetestowano $\eta\in\{0{,}01,0{,}1,1,3\}/N$ oraz
-inicjalizację Hebba i~losową.
+Konsekwencją są praktycznie tylko dwa atraktory (punkt~\ref{sec:q6}). Pełną zbieżność do
+$\vv_1$ zaburzają wymuszone $w_{ii}=0$ i~symetryzacja, nie zmienia to jednak wniosku.
+Wynik nie zależy też od doboru parametrów: zbadano $\eta\in\{0{,}01,0{,}1,1,3\}/N$ oraz
+inicjalizację wagami Hebba i~losową.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{oja_trajectory}
   \caption{Uczenie regułą Oji: liczba stabilnych wzorców (góra) i~średnie wyrównanie wierszy
   $W$ z~pierwszą składową główną (dół) w~kolejnych epokach; linia ciągła --- start z~wag
-  Hebba, przerywana --- z~wag losowych. Dla $\eta=3/N$ wagi rozbiegają się.}
+  Hebba, przerywana --- z~wag losowych. Dla $\eta=3/N$ uczenie było rozbieżne.}
   \label{fig:oja}
 \end{figure}
 
@@ -404,41 +420,45 @@ inicjalizację Hebba i~losową.
   \label{fig:spectrum}
 \end{figure}
 
-\paragraph{Delta i projekcyjna.} Obie utrwalają wszystkie wzorce we wszystkich zbiorach, także
-w~26 silnie skorelowanych literach. To pokazuje, że architektura sieci Hopfielda jest w~stanie
-przechowywać te zbiory, a~ograniczeniem jest lokalna, korelacyjna natura reguły Hebba.
+\paragraph{Reguła delta i reguła projekcyjna.} Obie reguły utrwaliły wszystkie wzorce we
+wszystkich zbiorach, także w~zbiorze 26 silnie skorelowanych liter. Dowodzi to, że architektura
+sieci Hopfielda umożliwia przechowywanie tych zbiorów, a~ograniczeniem jest lokalny,
+korelacyjny charakter reguły Hebba.
 
 % ---------------------------------------------------------------------
-\subsection{Które zbiory sieć uczy się poprawnie i dlaczego}
+\subsection{Wpływ korelacji między wzorcami na stabilność}
 \label{sec:q2}
 
-Na podstawie \cref{tab:datasets,tab:stability}:
+Na podstawie \cref{tab:datasets,tab:stability} zbiory podzielono na trzy grupy:
 \begin{itemize}
-  \item \textbf{Poprawnie (Hebb):} \texttt{large-25x25} --- duże $N$, mało wzorców i~najniższe
-  średnie nakładanie (0{,}14). Niestabilny jest tylko wzorzec nr~3, mocno podobny do wzorca nr~1
-  ($m=0{,}47$).
-  \item \textbf{Częściowo:} \texttt{small-7x7}, \texttt{animals-14x9}. Wzorce są dość
-  zróżnicowane ($|m|\approx0{,}2$--$0{,}3$), ale $N$ jest małe, więc przesłuch o~wariancji
-  $\sim P/N$ i~niezerowej średniej (wspólne czarne tło) przekracza sygnał dla części pikseli.
-  \item \textbf{Niepoprawnie:} \texttt{letters-abc-8x12}, \texttt{letters-14x20},
-  \texttt{OCRA-12x30-cut}, \texttt{large-25x25.plus}, \texttt{large-25x50}. Litery mają
-  ogromne wspólne tło (średni piksel $-0{,}71$ do $-0{,}76$), co daje $|m|\approx0{,}7$--$0{,}8$:
-  przesłuch od każdego innego wzorca jest wtedy rzędu sygnału. W~\texttt{large-25x25.plus}
-  dodano 9 wzorców do 6 dobrze zapamiętywanych, co przy średnim $|m|=0{,}17$ wystarcza, by
-  zostało stabilnych 1 z~15. \texttt{large-25x50} omawiamy w~\cref{sec:q3}.
+  \item \textbf{Zbiory zapamiętane poprawnie (Hebb):} \texttt{large-25x25} --- duże $N$, mała
+  liczba wzorców i~najniższe średnie nakładanie (0{,}14). Niestabilny był jedynie wzorzec nr~3,
+  silnie podobny do wzorca nr~1 ($m=0{,}47$).
+  \item \textbf{Zbiory zapamiętane częściowo:} \texttt{small-7x7}, \texttt{animals-14x9}.
+  Wzorce są dość zróżnicowane ($|m|\approx0{,}2$--$0{,}3$), jednak przy małym $N$ przesłuch
+  o~wariancji $\sim P/N$ i~niezerowej średniej (wspólne czarne tło) przewyższa sygnał w~części
+  pikseli.
+  \item \textbf{Zbiory niezapamiętane:} \texttt{letters-abc-8x12}, \texttt{letters-14x20},
+  \texttt{OCRA-12x30-cut}, \texttt{large-25x25.plus}, \texttt{large-25x50}. Litery mają rozległe
+  wspólne tło (średnia wartość piksela od $-0{,}71$ do $-0{,}76$), co daje $|m|\approx0{,}7$--$0{,}8$;
+  przesłuch od każdego z~pozostałych wzorców jest wówczas rzędu sygnału. W~zbiorze
+  \texttt{large-25x25.plus} do 6~wzorców zbioru \texttt{large-25x25} dodano 9~kolejnych, co
+  przy
+  średnim $|m|=0{,}17$ wystarczyło, by stabilny pozostał tylko 1 z~15. Zbiór
+  \texttt{large-25x50} omówiono w~punkcie~\ref{sec:q3}.
 \end{itemize}
 Zgodnie z~teorią~\cite{amit1987,lowe1998} pojemność reguły Hebba silnie zależy od korelacji
-wzorców, a~granica $0{,}138N$ obowiązuje tylko dla wzorców losowych i~zrównoważonych.
-Niestabilne wzorce nie są jednak ,,zgubione'': sieć wpada w~pobliski stan fałszywy,
-często o~dużym nakładaniu z~oryginałem (np. 0{,}73 dla \texttt{animals-14x9}, 0{,}81 dla
+wzorców, a~granica $0{,}138N$ obowiązuje wyłącznie dla wzorców losowych i~zrównoważonych.
+Niestabilność wzorca nie oznacza jednak utraty zapisanej w~nim informacji: sieć zbiegała do
+pobliskiego stanu fałszywego, często o~dużym nakładaniu z~oryginałem (np. 0{,}73 dla \texttt{animals-14x9}, 0{,}81 dla
 liter --- \cref{fig:noise_overlap}).
 
 % ---------------------------------------------------------------------
-\subsection{Zbiory 25$\times$25 i 25$\times$50}
+\subsection{Wpływ rozmiaru bitmapy: zbiory 25$\times$25 i 25$\times$50}
 \label{sec:q3}
 
-Analiza danych pokazuje, że każdy wzorzec \texttt{large-25x50} to wzorzec z~\texttt{large-25x25}
-uzupełniony o~blok 25$\times$25 \emph{stale białych} pikseli (te same 625 pikseli $=+1$ we
+Analiza zbiorów wykazała, że każdy wzorzec \texttt{large-25x50} jest wzorcem
+z~\texttt{large-25x25} uzupełnionym o~blok 25$\times$25 \emph{stale białych} pikseli (te same 625 pikseli $=+1$ we
 wszystkich wzorcach). Wspólny blok dodaje do każdego nakładania tę samą wartość:
 \[
   m_{\mu\nu}^{(25\times50)} = \tfrac12\bigl(m_{\mu\nu}^{(25\times25)} + 1\bigr),
@@ -447,16 +467,19 @@ więc średnie $|m|$ rośnie z~0{,}14 do 0{,}57 (\cref{fig:25x50}). Przesłuch p
 $\nu$ to $\sum_{\mu\ne\nu}x_i^\mu m_{\mu\nu}$, a~skoro teraz $m_{\mu\nu}\gtrsim\frac12$ dla
 \emph{wszystkich} par, wynosi on w~przybliżeniu $\frac12\sum_{\mu\ne\nu}x_i^\mu$. Dla pikseli,
 w~których pozostałe 5 wzorców ma przeważnie przeciwny kolor, osiąga to $1{,}5$--$2{,}5$, podczas
-gdy sygnał wynosi $\approx1$. W~efekcie \emph{żaden} wzorzec nie jest stabilny, a~sieć trafia do
-kilku stanów mieszanych (średnie nakładanie z~oryginałem 0{,}74 niezależnie od poziomu szumu).
-Większa liczba neuronów nie pomaga, bo nowe neurony nie niosą żadnej informacji, która
-odróżniałaby wzorce --- zmniejszają $P/N$, ale nie przesłuch.
+gdy sygnał wynosi $\approx1$. W~efekcie \emph{żaden} wzorzec nie był stabilny, a~sieć
+zbiegała do kilku stanów mieszanych (średnie nakładanie z~oryginałem 0{,}74 niezależnie od
+poziomu szumu). Zwiększenie liczby neuronów nie poprawia pamięci, ponieważ nowe neurony nie
+niosą informacji odróżniającej wzorce --- zmniejszają $P/N$, ale nie przesłuch.
 
-Eksperyment kontrolny potwierdza tę interpretację: jeśli dodatkowy blok wypełnić
-\emph{losowymi, różnymi dla każdego wzorca} pikselami, średnie $|m|$ spada do 0{,}08
-i~Hebb zapamiętuje wszystkie 6 wzorców, odtwarzając je przy uszkodzeniu do 40\% pikseli
-(\cref{tab:25x50,fig:25x50noise}). Reguła projekcyjna jest niewrażliwa na wspólny blok, bo usuwa
-przesłuch niezależnie od korelacji.
+Interpretację tę potwierdził eksperyment kontrolny: po wypełnieniu dodatkowego bloku
+\emph{losowymi, różnymi dla każdego wzorca} pikselami średnie $|m|$ spadło do 0{,}08,
+a~reguła Hebba zapamiętała wszystkie 6 wzorców i~odtwarzała je dokładnie w~co najmniej 94\%
+przypadków przy uszkodzeniu do 40\% pikseli (\cref{tab:25x50,fig:25x50noise}). Reguła
+projekcyjna jest niewrażliwa na wspólny blok, ponieważ eliminuje przesłuch niezależnie od
+korelacji. W~zbiorze kontrolnym jeden wzorzec okazał się stabilny także przy regule Oji ---
+co nie przeczy wnioskom z~punktu~\ref{sec:rules}, gdyż sieć o~wagach rzędu 1 może utrwalić
+wzorzec, który przypadkowo pokrywa się z~$\sgn(\vv_1)$.
 
 \begin{table}[H]
   \centering
@@ -481,14 +504,14 @@ przesłuch niezależnie od korelacji.
 \end{figure}
 
 % ---------------------------------------------------------------------
-\subsection{Odtwarzanie z uszkodzonego wejścia}
+\subsection{Odtwarzanie wzorców z uszkodzonego wejścia}
 \label{sec:q4}
 
 Każdy wzorzec uszkadzano, odwracając losowo wybrane $p\cdot N$ pikseli, $p\in\{0;0{,}05;\dots;0{,}5\}$,
-po 10 prób na wzorzec i~poziom; te same wejścia podawano wszystkim regułom w~obu trybach.
-\Cref{fig:noise_exact} pokazuje odsetek przypadków, w~których sieć wróciła dokładnie do
-oryginału, \cref{fig:noise_overlap} --- średnie końcowe nakładanie z~oryginałem,
-a~\cref{fig:noise_outcomes} --- gdzie trafia sieć z~regułą Hebba.
+po 10 prób na wzorzec i~poziom; te same wejścia podawano sieciom uczonym każdą z~reguł w~obu
+trybach. Na \cref{fig:noise_exact} przedstawiono odsetek przypadków, w~których sieć powróciła
+dokładnie do oryginału, na \cref{fig:noise_overlap} --- średnie końcowe nakładanie
+z~oryginałem, a~na \cref{fig:noise_outcomes} --- klasyfikację stanów końcowych dla reguły Hebba.
 
 \begin{figure}[H]
   \centering
@@ -509,65 +532,70 @@ a~\cref{fig:noise_outcomes} --- gdzie trafia sieć z~regułą Hebba.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{noise_outcomes_hebb}
-  \caption{Reguła Hebba, tryb asynchroniczny: gdzie kończy sieć startująca z~uszkodzonego wzorca.}
+  \caption{Reguła Hebba, tryb asynchroniczny: klasyfikacja stanów końcowych dla uszkodzonych
+  wzorców.}
   \label{fig:noise_outcomes}
 \end{figure}
 
 \begin{table}[H]
   \centering
-  \caption{Odtwarzanie (tryb asynchroniczny): odsetek dokładnych odtworzeń (,,dokł.'') i~średnie
-  nakładanie (,,nakł.'') przy 10\% i~30\% szumu dla reguł Hebba (H), Oji i~projekcyjnej (P);
+  \caption{Odtwarzanie (tryb asynchroniczny): odsetek dokładnych odtworzeń (\enquote{dokł.})
+  i~średnie nakładanie (\enquote{nakł.}) przy 10\% i~30\% szumu dla reguł Hebba (H), Oji i~projekcyjnej (P);
   $p_{90}$ --- największy poziom szumu, przy którym reguła projekcyjna odtwarza $\ge90\%$
   wzorców.}
   \label{tab:noise}
   \tabfile{critical_noise}
 \end{table}
 
-\paragraph{Wnioski.}
+\paragraph{Podsumowanie wyników.}
 \begin{itemize}
-  \item Przy regule Hebba dokładne odtworzenie jest możliwe tylko dla wzorców stabilnych, więc
-  krzywe zaczynają się od odsetka z~\cref{tab:stability}. Dla \texttt{large-25x25} odsetek
-  dokładnych odtworzeń spada z~83\% (5 stabilnych wzorców) do ok. 50\% przy 20--40\% szumu,
-  tzn. część stabilnych wzorców ma szerokie baseny, a~część wąskie (wzorce podobne do innych).
-  Dla mniejszych zbiorów baseny są wyraźnie mniejsze (np. \texttt{small-7x7}: spadek już
-  od 10--15\%). Niestabilne wzorce
-  prowadzą do stanów fałszywych (\cref{fig:noise_outcomes}), w~\texttt{small-7x7} także do
-  \emph{innego} wzorca --- ma on silnie nakładające się wzorce (do $0{,}51$).
-  \item Reguła projekcyjna odtwarza 100\% wzorców do ok. 30\% szumu w~większości zbiorów.
-  Promień przyciągania rośnie z~$N$ i~maleje z~obciążeniem i~korelacją: od $p_{90}=0{,}4$ dla
-  zbiorów 25$\times$25 do zaledwie 5\% dla 26 liter 14$\times$20 ($P/N=0{,}09$, $|m|=0{,}73$),
-  co odpowiada znanemu zmniejszaniu się basenów reguły projekcyjnej wraz
-  z~obciążeniem~\cite{kanter1987}.
-  \item Reguła Oji daje stałe nakładanie niezależne od szumu: sieć zawsze kończy w~jednym
-  z~dwóch stanów $\pm\sgn(\vv_1)$.
-  \item Przy 50\% szumu wejście jest losowe i~nakładanie spada do zera dla wszystkich reguł.
-  Tryby synchroniczny i~asynchroniczny dają bardzo podobne wyniki. Tryb synchroniczny potrzebuje
-  nieco więcej kroków i~czasem kończy w~cyklu, natomiast tryb asynchroniczny zawsze zbiega.
+  \item Przy regule Hebba dokładne odtworzenie jest możliwe wyłącznie dla wzorców stabilnych,
+  dlatego krzywe rozpoczynają się od odsetka wynikającego z~\cref{tab:stability}. Dla
+  \texttt{large-25x25} odsetek dokładnych odtworzeń malał z~83\% (5 stabilnych wzorców) do
+  60--65\% przy 10--25\% szumu i~ok. 45\% przy 30--40\% szumu, co oznacza, że część stabilnych
+  wzorców ma szerokie baseny przyciągania, a~część wąskie (wzorce podobne do innych). Dla
+  mniejszych zbiorów baseny były wyraźnie mniejsze (np. dla \texttt{small-7x7} odsetek spadał
+  z~60\% bez szumu do 46\% przy 10\% i~30\% przy 20\% szumu). Niestabilne wzorce prowadziły do
+  stanów fałszywych (\cref{fig:noise_outcomes}), a~w~\texttt{small-7x7} także do \emph{innego}
+  wzorca (37\% przypadków), co wynika z~silnego nakładania się jego wzorców (do $0{,}51$).
+  \item Reguła projekcyjna odtwarzała co najmniej 97\% wzorców do 30\% szumu w~pięciu z~ośmiu
+  zbiorów. Promień przyciągania rośnie z~$N$ i~maleje wraz z~obciążeniem i~korelacją: od
+  $p_{90}=0{,}40$ dla zbiorów 25$\times$25 do wartości poniżej 5\% dla 26 liter 14$\times$20
+  ($P/N=0{,}09$, $|m|=0{,}73$; przy 5\% szumu odtworzono 84\% wzorców), co odpowiada znanemu
+  zmniejszaniu się basenów reguły projekcyjnej wraz z~obciążeniem~\cite{kanter1987}.
+  \item Przy regule Oji nakładanie końcowe nie zależało od poziomu szumu: sieć zawsze zbiegała
+  do jednego z~dwóch stanów $\pm\sgn(\vv_1)$.
+  \item Przy 50\% szumu wejście jest losowe, a~nakładanie spadało do zera dla wszystkich reguł.
+  Tryby synchroniczny i~asynchroniczny dawały zbliżone odsetki dokładnych odtworzeń; tryb
+  synchroniczny wymagał średnio więcej kroków (np. 3{,}5 wobec 2{,}6 dla reguły Hebba)
+  i~niekiedy kończył się cyklem --- najczęściej dla reguły projekcyjnej na 26 literach (57\%
+  prób, do 83\% przy dużym szumie) --- natomiast tryb asynchroniczny zawsze był zbieżny.
 \end{itemize}
 
 % ---------------------------------------------------------------------
-\subsection{Zbiory z grupami podobnych wzorców a zbiory zróżnicowane}
+\subsection{Wpływ podobieństwa wzorców na odtwarzanie}
 \label{sec:q5}
 
-Porównujemy zbiory o~podobnej liczności ($P=5$--7), uporządkowane od najbardziej
+Porównano zbiory o~podobnej liczności ($P=5$--7), uporządkowane od najbardziej
 zróżnicowanego do najbardziej jednorodnego: \texttt{large-25x25} (średnie $|m|=0{,}14$),
 \texttt{animals-14x9} (0{,}21), \texttt{OCRA-12x30-cut} (0{,}27, litery o~wspólnych kreskach),
-\texttt{small-7x7} (0{,}29, ale w~parach do 0{,}51) i~\texttt{large-25x50} (0{,}57).
-\Cref{fig:similar,fig:overlap_vs_recovery} pokazują, że odsetek dokładnych odtworzeń przy
-regule Hebba maleje z~nakładaniem: od 68\% (\texttt{large-25x25}, 10\% szumu) przez 32\%
-(zwierzęta) do 4\% (OCRA) i~0\% (25$\times$50 i~litery). Wyjątkiem jest \texttt{small-7x7}
-(48\%): ma tylko $N=49$ neuronów, ale trzy jego wzorce (X, ramka, kwadrat) są prawie
-,,ortogonalne'', a~dwa pozostałe mocno podobne do nich. W~zbiorach z~grupami podobnych wzorców
-sieć częściej myli wzorce z~jednej grupy (przypadki ,,inny wzorzec'' w~\texttt{small-7x7},
-\cref{fig:noise_outcomes}) albo trafia do stanu mieszanego całej grupy.
+\texttt{small-7x7} (0{,}29, przy czym dla niektórych par do 0{,}51) i~\texttt{large-25x50}
+(0{,}57). Jak wynika z~\cref{fig:similar,fig:overlap_vs_recovery}, odsetek dokładnych
+odtworzeń przy regule Hebba malał wraz z~nakładaniem: od 65\% (\texttt{large-25x25}, 10\%
+szumu) przez 30\% (\texttt{animals-14x9}) do 10\% (\texttt{OCRA-12x30-cut}) i~0\%
+(\texttt{large-25x50} i~zbiory liter). Wyjątek stanowi \texttt{small-7x7} (46\%): zbiór ma
+tylko $N=49$ neuronów, ale trzy jego wzorce (X, ramka, kwadrat) są prawie ortogonalne,
+a~dwa pozostałe silnie do nich podobne. W~zbiorach zawierających grupy podobnych wzorców
+sieć częściej myliła wzorce z~tej samej grupy (stany końcowe klasy \enquote{inny wzorzec}
+w~\texttt{small-7x7}, \cref{fig:noise_outcomes}) albo zbiegała do stanu mieszanego całej grupy.
 
-Warto zauważyć, że średnie nakładanie stanu końcowego z~oryginałem jest dla zbiorów jednorodnych
-mylące: stan mieszany ma duże nakładanie z~\emph{każdym} wzorcem (np. 0{,}90 dla
-\texttt{letters-abc-8x12}, choć żaden wzorzec nie jest odtwarzany,
-\cref{fig:overlap_vs_recovery} prawo). Dla reguły projekcyjnej podobieństwo wzorców zmniejsza
-baseny przyciągania (bliskie sobie wzorce dzielą przestrzeń stanów: $p_{90}=0{,}20$ dla
-\texttt{small-7x7} wobec 0{,}40 dla \texttt{large-25x25}, \cref{tab:noise}), ale nie niszczy
-stabilności.
+Należy podkreślić, że dla zbiorów jednorodnych średnie nakładanie stanu końcowego
+z~oryginałem jest miarą mylącą: stan mieszany ma duże nakładanie z~\emph{każdym} wzorcem
+(np. 0{,}90 dla \texttt{letters-abc-8x12}, choć żaden wzorzec nie został odtworzony,
+\cref{fig:overlap_vs_recovery}, prawy panel). Dla reguły projekcyjnej podobieństwo wzorców
+zmniejsza baseny przyciągania (bliskie sobie wzorce dzielą przestrzeń stanów:
+$p_{90}=0{,}20$ dla \texttt{small-7x7} wobec 0{,}40 dla \texttt{large-25x25},
+\cref{tab:noise}), nie wpływa jednak na stabilność.
 
 \begin{figure}[H]
   \centering
@@ -587,31 +615,36 @@ stabilności.
 \end{figure}
 
 % ---------------------------------------------------------------------
-\subsection{Reakcja na losowe wejście}
+\subsection{Dynamika dla losowych stanów początkowych}
 \label{sec:q6}
 
-Do każdej sieci podano 200 losowych stanów (każdy piksel $\pm1$ z~p-stwem $\frac12$).
-\Cref{fig:random,tab:random} podsumowują stany końcowe.
+Każdą sieć uruchomiono z~200 losowych stanów początkowych (każdy piksel równy $\pm1$
+z~prawdopodobieństwem $\frac12$). Klasyfikację stanów końcowych zestawiono na
+\cref{fig:random} i~w~\cref{tab:random}.
 \begin{itemize}
-  \item \textbf{Hebb:} prawie zawsze stan fałszywy. W~zbiorach o~wysokich korelacjach
-  (litery, 25$\times$25.plus) z~200 wejść powstają tylko 2 różne stany końcowe:
-  stan mieszany będący ,,średnim'' wzorcem i~jego negatyw --- ma on niższą energię niż same
-  wzorce i~przyciąga wszystkie wejścia (dla 25$\times$50 i~OCRA: 10 stanów). Dla zbiorów zróżnicowanych pojawiają się też
-  wzorce i~ich negatywy (np. \texttt{small-7x7}: 37\% wzorców, 33\% negatywów)
-  i~liczne stany mieszane (\cref{fig:random_examples}).
-  \item \textbf{Oja:} w~7 z~8 zbiorów dokładnie 2 stany końcowe --- $\pm\sgn(\vv_1)$ ---
-  co eksperymentalnie potwierdza, że sieć ma macierz wag (efektywnie) rzędu 1. Wyjątkiem jest
-  OCRA (4 stany, dwie pary $\pm$): tam po 100 epokach drugi kierunek osobliwy ma jeszcze 21\%
-  siły pierwszego, więc zanik nie jest zakończony.
-  \item \textbf{Projekcyjna:} w~większości zbiorów 23--43\% wejść trafia do wzorca, podobny
-  odsetek do negatywu, reszta do jednego z~wielu (57--109; dla 3 liter abc tylko 8) stanów fałszywych. Wyjątkiem są
-  26 liter: baseny są tam tak małe, że żadne losowe wejście nie trafia do wzorca, a~200 wejść
-  kończy w~199 różnych stanach fałszywych. Wejście losowe ma nakładanie
-  $\sim1/\sqrt N$ ze wszystkimi wzorcami, więc trafia do wzorca, którego basen akurat
-  ,,przetnie''; negatywy są równie częste jak wzorce, bo $E(-\vs)=E(\vs)$.
-  \item \textbf{Oscylacje} pojawiają się wyłącznie w~trybie synchronicznym, zwłaszcza dla
-  reguły projekcyjnej na 26 literach (81\% wejść kończy w~cyklu 2). W~trybie
-  asynchronicznym cykli nie ma, zgodnie z~\cref{sec:model}.
+  \item \textbf{Reguła Hebba:} sieć niemal zawsze zbiegała do stanu fałszywego. W~zbiorach
+  o~wysokich korelacjach (litery, \texttt{large-25x25.plus}) 200 wejść prowadziło do zaledwie
+  2--3 różnych stanów końcowych: stanu mieszanego odpowiadającego \enquote{uśrednionemu}
+  wzorcowi i~jego negatywu. Stan ten ma niższą energię niż same wzorce i~przyciąga wszystkie
+  wejścia (dla \texttt{large-25x50} i~\texttt{OCRA-12x30-cut} zaobserwowano odpowiednio 10
+  i~9 stanów). W~zbiorach zróżnicowanych sieć zbiegała także do wzorców i~ich negatywów (np.
+  \texttt{small-7x7}: 30\% wzorców, 36\% negatywów) oraz do licznych stanów mieszanych
+  (\cref{fig:random_examples}).
+  \item \textbf{Reguła Oji:} w~7 z~8 zbiorów otrzymano dokładnie 2 stany końcowe
+  $\pm\sgn(\vv_1)$, co potwierdza eksperymentalnie, że macierz wag jest efektywnie rzędu 1.
+  Wyjątek stanowi \texttt{OCRA-12x30-cut} (4 stany, dwie pary $\pm$): po 100 epokach druga
+  wartość osobliwa wynosiła jeszcze 21\% pierwszej, a~więc zanik pozostałych kierunków nie był
+  zakończony.
+  \item \textbf{Reguła projekcyjna:} w~większości zbiorów 22--43\% wejść zbiegało do wzorca,
+  podobny odsetek do negatywu, a~pozostałe do jednego z~wielu (57--111; dla 3 liter
+  \texttt{letters-abc-8x12} jedynie 8) stanów fałszywych. Wyjątek stanowi zbiór 26 liter:
+  baseny przyciągania są w~nim tak małe, że żadne losowe wejście nie zbiegło do wzorca,
+  a~200 wejść dało 199 różnych stanów fałszywych. Losowy stan początkowy ma nakładanie rzędu
+  $1/\sqrt N$ ze wszystkimi wzorcami, zbiega więc do wzorca, w~którego basenie przyciągania
+  się znajduje; negatywy występują równie często jak wzorce, ponieważ $E(-\vs)=E(\vs)$.
+  \item \textbf{Oscylacje} wystąpiły wyłącznie w~trybie synchronicznym, przede wszystkim dla
+  reguły projekcyjnej na 26 literach (82\% wejść zakończyło się cyklem długości 2). W~trybie
+  asynchronicznym cykle nie wystąpiły, zgodnie z~analizą z~punktu~\ref{sec:model}.
 \end{itemize}
 
 \begin{figure}[H]
@@ -639,35 +672,36 @@ Do każdej sieci podano 200 losowych stanów (każdy piksel $\pm1$ z~p-stwem $\f
 \end{figure}
 
 % ---------------------------------------------------------------------
-\subsection{Możliwie liczny zbiór stabilnych wzorców 5$\times$5}
+\subsection{Maksymalny zbiór stabilnych wzorców 5$\times$5}
 \label{sec:q7}
 
-Szukamy jak największego zbioru różnych wektorów długości 25 (bez par $\vx,-\vx$, które
-trywialnie zwiększałyby liczność), z~których \emph{każdy} jest ściśle stabilny
-($x_i^\mu h_i^\mu>0$) w~sieci nauczonej regułą Hebba. Wektory ortogonalne byłyby idealne
-(przesłuch $=0$), ale dla nieparzystego $N=25$ iloczyn skalarny dwóch wektorów $\pm1$ jest
-nieparzysty, więc dokładna ortogonalność jest niemożliwa. Zastosowano przeszukiwanie: zbiór jest
-powiększany o~losowy wektor, po czym symulowane wyżarzanie (zmiany pojedynczych pikseli)
-minimalizuje liczbę niestabilnych pikseli; jeżeli po 10 próbach nie udaje się uzyskać zbioru
-większego o~1, przeszukiwanie kończy się.
+Poszukiwano możliwie licznego zbioru różnych wektorów długości 25 (z~wyłączeniem par
+$\vx,-\vx$, które w~trywialny sposób zwiększałyby liczność), z~których \emph{każdy} jest ściśle
+stabilny ($x_i^\mu h_i^\mu>0$) w~sieci uczonej regułą Hebba. Optymalne byłyby wektory
+ortogonalne (zerowy przesłuch), jednak dla nieparzystego $N=25$ iloczyn skalarny dwóch
+wektorów $\pm1$ jest nieparzysty, więc dokładna ortogonalność jest niemożliwa. Zastosowano
+przeszukiwanie heurystyczne: zbiór powiększano o~losowy wektor, a~następnie metodą
+symulowanego wyżarzania (zmiany pojedynczych pikseli) minimalizowano liczbę niestabilnych
+pikseli; przeszukiwanie kończono, gdy w~10 kolejnych próbach nie udało się uzyskać zbioru
+większego o~1.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.85\linewidth]{stable_5x5}
   \caption{Znaleziony zbiór 19 wzorców 5$\times$5, wszystkie ściśle stabilne przy regule
-  Hebba; ,,min'' to najmniejszy margines $x_i^\mu h_i^\mu$ (w~jednostkach $1/N$).}
+  Hebba; \enquote{min} oznacza najmniejszy margines $x_i^\mu h_i^\mu$ (w~jednostkach $1/N$).}
   \label{fig:5x5}
 \end{figure}
 
 Znaleziono zbiór $P=19$ wzorców ($P/N=0{,}76$, \cref{fig:5x5}) o~średnim $|m|=0{,}16$
-i~maksymalnym $0{,}44$. To ponad 5 razy więcej niż $0{,}138N\approx3{,}5$: granica
-statystyczna dotyczy wzorców \emph{losowych} (\cref{fig:5x5random}: dla losowych zbiorów
-już przy $P=5$ tylko połowa jest w~pełni stabilna), a~wzorce dobrane celowo mogą mieć przesłuch
-,,ustawiony'' tak, by nie przeważał nad sygnałem w~żadnym pikselu. Ceną są bardzo małe baseny
-przyciągania: najmniejszy margines to $2/N$, a~po odwróceniu jednego piksela sieć wraca do
-wzorca tylko w~68\% przypadków. Dla reguły projekcyjnej praktycznie każdy (co najmniej 98\%
-losowań) zbiór do 24 losowych wektorów jest stabilny; przy $P=25$ rzut staje się macierzą
-jednostkową, którą zerowanie przekątnej zamienia w~$W=0$.
+i~maksymalnym $0{,}60$. Jest to ponad pięciokrotnie więcej niż $0{,}138N\approx3{,}5$:
+granica statystyczna dotyczy wzorców \emph{losowych} (\cref{fig:5x5random}: spośród losowych
+zbiorów o~$P=5$ w~pełni stabilnych było tylko 52\%), natomiast wzorce dobrane celowo mogą mieć
+przesłuch o~takim rozkładzie, że w~żadnym pikselu nie przeważa on nad sygnałem. Ceną są
+bardzo małe baseny przyciągania: najmniejszy margines wynosi $2/N$, a~po odwróceniu jednego
+piksela sieć powracała do wzorca jedynie w~66\% przypadków. Przy regule projekcyjnej
+praktycznie każdy (co najmniej 98\% losowań) zbiór do 24 losowych wektorów był stabilny; przy
+$P=25$ rzut staje się macierzą jednostkową, którą wyzerowanie przekątnej przekształca w~$W=0$.
 
 \begin{figure}[H]
   \centering
@@ -678,22 +712,25 @@ jednostkową, którą zerowanie przekątnej zamienia w~$W=0$.
 \end{figure}
 
 % ---------------------------------------------------------------------
-\subsection{Oscylacja między dwoma stanami}
+\subsection{Cykle długości 2 w dynamice synchronicznej}
 \label{sec:q8}
 
-Zbiór uczący: jeden wzorzec $\vx$ 6$\times$6 (litera X). Wejście: $\vs$ --- górna połowa
-biała, dolna czarna, czyli $\vx\cdot\vs=0$ (wejście ortogonalne do wzorca). Dla reguły Hebba
+Sieć nauczono jednego wzorca $\vx$ o~wymiarach 6$\times$6 (litera X). Stan początkowy $\vs$
+miał białą górną połowę i~czarną dolną, a~zatem $\vx\cdot\vs=0$ (stan ortogonalny do
+wzorca). Dla reguły Hebba
 $W=\frac1N\vx\vx^\top-\frac1N I$, więc
 \[
   \vh = W\vs = \tfrac1N\vx\,(\vx\cdot\vs) - \tfrac1N\vs = -\tfrac1N\vs .
 \]
-Każdy neuron ma pole przeciwne do swojego stanu, więc krok synchroniczny odwraca \emph{wszystkie}
-piksele: $\vs\to-\vs$, a~ponieważ $\vx\cdot(-\vs)=0$, następny krok przywraca $\vs$. Powstaje cykl
-długości 2 o~stałej energii $E=0{,}5$ (\cref{fig:osc}). W~trybie asynchronicznym pierwszy
-odwrócony neuron psuje ortogonalność, $\vx\cdot\vs\neq0$, i~sieć w~jednym przebiegu zbiega do
-wzorca lub jego negatywu, a~energia spada do $-17{,}5$. Ogólnie: każde wejście ortogonalne do
-wszystkich wzorców uczących ($X\vs=0$) oscyluje w~trybie synchronicznym, bo wtedy
-$\vh=-\frac PN\vs$. Te same oscylacje widać w~\cref{sec:q6} (81\% losowych wejść dla liter).
+Pole każdego neuronu ma znak przeciwny do jego stanu, dlatego krok synchroniczny odwraca
+\emph{wszystkie} piksele: $\vs\to-\vs$, a~ponieważ $\vx\cdot(-\vs)=0$, następny krok przywraca
+$\vs$. Powstaje cykl długości 2 o~stałej energii $E=0{,}5$ (\cref{fig:osc}). W~trybie
+asynchronicznym zmiana stanu pierwszego neuronu narusza ortogonalność ($\vx\cdot\vs\neq0$),
+a~sieć w~jednym przebiegu zbiegła do wzorca lub jego negatywu, przy czym energia spadła do
+$-17{,}5$. W~ogólności każdy stan ortogonalny do wszystkich wzorców uczących ($X\vs=0$)
+oscyluje w~trybie synchronicznym, ponieważ wówczas $\vh=-\frac PN\vs$. Cykle długości 2
+obserwowano również dla losowych stanów początkowych (punkt~\ref{sec:q6}; 82\% wejść dla
+26 liter przy regule projekcyjnej).
 
 \begin{figure}[H]
   \centering
@@ -704,16 +741,16 @@ $\vh=-\frac PN\vs$. Te same oscylacje widać w~\cref{sec:q6} (81\% losowych wej�
 \end{figure}
 
 % ---------------------------------------------------------------------
-\subsection{Duże bitmapy: zdjęcia kotów 200$\times$300}
+\subsection{Pamięć dużych bitmap: zdjęcia kotów 200$\times$300}
 \label{sec:q9}
 
 Wykorzystano 10 zdjęć kotów (9 przykładowych obrazów klas kotowatych z~ImageNet~\cite{deng2009}
-oraz obraz \texttt{chelsea} z~scikit-image~\cite{vanderwalt2014}). Każde zdjęcie przekształcono do
-skali szarości, przycięto do proporcji 2:3, przeskalowano do 200$\times$300 i~zbinaryzowano
-progiem równym medianie jasności. Mediana daje wzorce zrównoważone (połowa pikseli białych),
-co zmniejsza nakładania między obrazami do średnio 0{,}07 (maks. 0{,}27). Sieć ma
-$N=60\,000$ neuronów; macierz wag nie mieściłaby się w~pamięci (14{,}4\,GB), więc użyto
-\texttt{LowRankHopfield} (\cref{sec:impl}).
+oraz obraz \texttt{chelsea} z~biblioteki scikit-image~\cite{vanderwalt2014}). Każde zdjęcie
+przekształcono do skali szarości, przycięto do proporcji 2:3, przeskalowano do 200$\times$300
+i~zbinaryzowano z~progiem równym medianie jasności. Próg medianowy daje wzorce zrównoważone
+(połowa pikseli białych), co zmniejszyło nakładania między obrazami do średnio 0{,}07
+(maks. 0{,}27). Sieć ma $N=60\,000$ neuronów; macierz wag wymagałaby 14{,}4\,GB pamięci,
+dlatego użyto klasy \texttt{LowRankHopfield} (zob. punkt~\ref{sec:impl}).
 
 \begin{figure}[H]
   \centering
@@ -738,20 +775,23 @@ $N=60\,000$ neuronów; macierz wag nie mieściłaby się w~pamięci (14{,}4\,GB)
   \label{fig:cats_recovery}
 \end{figure}
 
-Przy $P/N=1{,}7\cdot10^{-4}$ i~zrównoważonych, mało skorelowanych wzorcach jesteśmy głęboko
-w~reżimie, w~którym reguła Hebba działa (\cref{tab:cats}). Wszystkie 10 wzorców jest stabilnych
-przy obu regułach. Sieć odtwarza obraz zwykle w~\emph{jednym} kroku: przy 45\% szumu sygnał
-$(1-2p)$ wciąż dominuje nad przesłuchem $\sim\sqrt{P/N}$. Hebb daje 85--100\% dokładnych
-odtworzeń; pozostałe przypadki różnią się od oryginału kilkoma pikselami (nakładanie 0{,}998),
-bo dwa wzorce mają piksele o~bardzo małym marginesie stabilności. Reguła projekcyjna odtwarza
-100\% przypadków. Zasłonięcie nawet 75\% obrazu nie przeszkadza: pozostała ćwiartka wystarcza
-do jednoznacznej identyfikacji wzorca.
+Przy $P/N=1{,}7\cdot10^{-4}$ oraz zrównoważonych i~słabo skorelowanych wzorcach sieć pracuje
+głęboko w~reżimie poprawnego działania reguły Hebba (\cref{tab:cats}). Wszystkie 10 wzorców
+było stabilnych przy obu regułach. Sieć odtwarzała obraz zwykle w~\emph{jednym} kroku: nawet
+przy 45\% szumu sygnał $(1-2p)$ dominuje nad przesłuchem rzędu $\sqrt{P/N}$. Reguła Hebba dała
+85--95\% dokładnych odtworzeń; w~pozostałych przypadkach stan końcowy różnił się od oryginału
+kilkoma pikselami (średnie nakładanie 0{,}999), ponieważ dwa wzorce zawierają piksele
+o~bardzo małym marginesie stabilności. Reguła projekcyjna odtworzyła wszystkie wzorce we
+wszystkich próbach. Zasłonięcie połowy obrazu nie wpłynęło na wynik, a~przy zasłonięciu 75\%
+obrazu reguła projekcyjna nadal odtwarzała wszystkie wzorce, natomiast reguła Hebba 9 z~10
+--- w~jednym przypadku sieć zbiegła do stanu fałszywego (nakładanie ok. 0{,}36). Pozostała
+ćwiartka obrazu wystarcza więc zwykle do jednoznacznej identyfikacji wzorca.
 
-Regułę Oji, wymagającą jawnej macierzy wag i~$O(N^2)$ pamięci na każdą aktualizację, uruchomiono
-na wersji zmniejszonej 4-krotnie (50$\times$75, $N=3750$). Wynik jest taki sam jak dla małych
-zbiorów: 0 stabilnych wzorców, wyrównanie z~$\vv_1$ równe 0{,}79 (\cref{fig:cats_small}).
-Przy tej rozdzielczości Hebb utrwala 8 z~10 wzorców --- zmniejszenie $N$ przy tych samych
-korelacjach zwiększa przesłuch.
+Regułę Oji, wymagającą jawnej macierzy wag i~$O(N^2)$ operacji na każdą aktualizację,
+zastosowano do wersji zmniejszonej czterokrotnie (50$\times$75, $N=3750$). Wynik był taki sam
+jak dla małych zbiorów: 0 stabilnych wzorców przy wyrównaniu z~$\vv_1$ równym 0{,}79
+(\cref{fig:cats_small}). Przy tej rozdzielczości reguła Hebba utrwaliła 8 z~10 wzorców
+--- zmniejszenie $N$ przy niezmienionych korelacjach zwiększa przesłuch.
 
 \begin{table}[H]
   \centering
@@ -772,33 +812,36 @@ korelacjach zwiększa przesłuch.
 \section{Podsumowanie i wnioski}
 
 \begin{enumerate}
-  \item \textbf{Reguła Hebba} działa, bo każdy wzorzec wnosi do własnego pola lokalnego sygnał
-  rzędu 1, a~do pól pozostałych wzorców tylko przesłuch proporcjonalny do nakładań. Liczba
-  stabilnych wzorców jest w~całości wyjaśniona przez przesłuch (zgodność predykcji
-  z~symulacją we wszystkich 8 zbiorach). Dostarczone zbiory mają obciążenie poniżej
-  $0{,}138N$, ale korelacje (wspólne tło, podobne kształty) obniżają pojemność wielokrotnie:
-  poprawnie zapamiętywany jest tylko \texttt{large-25x25}. Dla dużych, zrównoważonych
-  bitmap (koty, $N=60\,000$) Hebb działa bardzo dobrze.
+  \item \textbf{Reguła Hebba} zapewnia stabilność wzorców, ponieważ każdy wzorzec wnosi do
+  własnego pola lokalnego sygnał rzędu 1, a~do pól pozostałych wzorców jedynie przesłuch
+  proporcjonalny do nakładań. Rozkład pola lokalnego na sygnał i~przesłuch w~pełni wyjaśnił
+  liczbę stabilnych wzorców we wszystkich 8 zbiorach. Dostarczone zbiory mają obciążenie
+  poniżej $0{,}138N$, jednak korelacje (wspólne tło, podobne kształty) wielokrotnie obniżają
+  pojemność: poprawnie zapamiętany został tylko \texttt{large-25x25}. Dla dużych,
+  zrównoważonych bitmap (koty, $N=60\,000$) reguła Hebba okazała się bardzo skuteczna.
   \item \textbf{Reguła Oji} jest znormalizowaną regułą Hebba i~algorytmem PCA: każdy neuron uczy
   się pierwszej składowej głównej. W~sieci Hopfielda prowadzi to do macierzy wag rzędu 1
-  i~(praktycznie) dwóch atraktorów, więc nie utrwala żadnego wzorca w~żadnym zbiorze. Krok
-  uczenia musi skalować się jak $1/N$. Pamięć skojarzeniową z~idei Oji daje dopiero wersja
-  podprzestrzenna~\cite{oja1989,sanger1989}, równoważna rzutowi na podprzestrzeń wzorców.
-  \item \textbf{Reguła projekcyjna/delta} usuwa przesłuch i~utrwala wszystkie wzorce we
-  wszystkich zbiorach, z~basenami przyciągania do 30--40\% szumu. Baseny maleją jednak wraz
-  z~obciążeniem i~podobieństwem wzorców (26 liter: tylko $\sim$5\%).
-  \item \textbf{25$\times$25 vs 25$\times$50}: druga wersja to ta sama treść plus stały wspólny
-  blok, który podnosi nakładania do $\approx0{,}57$ i~zamienia pamięć Hebba w~kilka stanów
-  mieszanych. Więcej neuronów pomaga tylko wtedy, gdy niosą informację różnicującą wzorce.
-  \item \textbf{Wejście losowe} kończy w~stanach fałszywych (stany mieszane, negatywy) lub,
-  w~trybie synchronicznym, w~cyklu długości 2. Dynamika asynchroniczna zawsze zbiega, bo
-  energia nie rośnie. Oscylację da się wywołać w~prosty sposób: wystarcza wejście ortogonalne do
-  wzorców uczących.
-  \item Celowo dobrane wzorce mogą przekroczyć ,,statystyczną'' pojemność: 19 stabilnych
-  wzorców 5$\times$5 przy regule Hebba, kosztem bardzo małych basenów przyciągania.
+  i~praktycznie dwóch atraktorów, wskutek czego reguła nie utrwaliła żadnego wzorca w~żadnym
+  z~dostarczonych zbiorów. Krok uczenia musi skalować się jak $1/N$. Pamięć skojarzeniową
+  opartą na idei Oji zapewnia dopiero wersja podprzestrzenna~\cite{oja1989,sanger1989},
+  równoważna rzutowi na podprzestrzeń wzorców.
+  \item \textbf{Reguła projekcyjna/delta} eliminuje przesłuch i~utrwaliła wszystkie wzorce we
+  wszystkich zbiorach, z~basenami przyciągania sięgającymi 30--40\% szumu. Baseny maleją
+  jednak wraz z~obciążeniem i~podobieństwem wzorców (dla 26 liter poniżej 5\% szumu).
+  \item \textbf{Zbiory 25$\times$25 i~25$\times$50}: drugi zbiór zawiera tę samą treść
+  uzupełnioną o~stały, wspólny blok, który podnosi nakładania do $\approx0{,}57$ i~sprawia, że
+  sieć uczona regułą Hebba zbiega do kilku stanów mieszanych. Zwiększenie liczby neuronów
+  poprawia pamięć tylko wtedy, gdy nowe neurony niosą informację różnicującą wzorce.
+  \item \textbf{Losowe stany początkowe} prowadziły do stanów fałszywych (stanów mieszanych,
+  negatywów) lub, w~trybie synchronicznym, do cykli długości 2. Dynamika asynchroniczna jest
+  zawsze zbieżna, ponieważ energia nie rośnie. Oscylację można wywołać w~prosty sposób: wystarcza
+  stan początkowy ortogonalny do wzorców uczących.
+  \item Celowo dobrane wzorce mogą przekroczyć statystyczną granicę pojemności: znaleziono
+  19 wzorców 5$\times$5 stabilnych przy regule Hebba, kosztem bardzo małych basenów
+  przyciągania.
 \end{enumerate}
-Naturalnym rozszerzeniem byłyby reguły o~większej pojemności zachowujące lokalność, np. reguła
-Storkeya~\cite{storkey1997}, oraz podprzestrzenna reguła Oji.
+Naturalnym kierunkiem dalszych prac są reguły o~większej pojemności zachowujące lokalność, np.
+reguła Storkeya~\cite{storkey1997}, oraz podprzestrzenna reguła Oji.
 
 \printbibliography[heading=bibintoc,title={Bibliografia}]
 
