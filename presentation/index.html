@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pamięć skojarzeniowa z użyciem sieci Hopfielda</title>
+    <link rel="stylesheet" href="vendor/reveal.js/dist/reset.css" />
+    <link rel="stylesheet" href="vendor/reveal.js/dist/reveal.css" />
+    <link rel="stylesheet" href="vendor/reveal.js/dist/theme/white.css" />
+    <link rel="stylesheet" href="css/theme.css" />
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <!-- 1 ------------------------------------------------------------ -->
+        <section class="title-slide">
+          <h3>Sieci neuronowe · projekt 2</h3>
+          <h1>Pamięć skojarzeniowa z&nbsp;użyciem sieci Hopfielda</h1>
+          <div class="authors">Marcin Falkowski, Antoni Kingston</div>
+          <div class="muted" style="font-size: 0.6em">listopad 2026</div>
+          <div class="title-pixels" id="title-pixels"></div>
+          <aside class="notes">
+            ~0:20. Przedstawiamy projekt: sieć Hopfielda jako pamięć skojarzeniowa, uczona regułą
+            Hebba i Oji. Bitmapa poniżej to jeden z wzorców (animals-14x9) odtwarzany na żywo.
+          </aside>
+        </section>
+
+        <!-- 2 ------------------------------------------------------------ -->
+        <section>
+          <h2>Cel i zakres pracy</h2>
+          <ul>
+            <li class="fragment">
+              <b>Implementacja</b> sieci Hopfielda o&nbsp;dowolnej liczbie neuronów, dynamika
+              synchroniczna i&nbsp;asynchroniczna, wizualizacja kolejnych kroków
+            </li>
+            <li class="fragment">
+              <b>Uczenie</b>: reguła Hebba, reguła Oji, a&nbsp;jako punkt odniesienia reguła
+              projekcyjna (delta)
+            </li>
+            <li class="fragment">
+              <b>Analiza</b>: stabilność wzorców w&nbsp;8&nbsp;zbiorach, odtwarzanie z&nbsp;szumu,
+              losowe wejście, zbiór 5×5, oscylacje, zdjęcia kotów 200×300
+            </li>
+          </ul>
+          <aside class="notes">~0:40. Trzy filary: implementacja, uczenie, analiza.</aside>
+        </section>
+
+        <!-- 3 ------------------------------------------------------------ -->
+        <section>
+          <h2>Model sieci i&nbsp;funkcja energii</h2>
+          <div class="cols wide-right">
+            <div style="font-size: 0.75em">
+              <p>\(N\) neuronów \(s_i\in\{-1,+1\}\) (piksele), wagi symetryczne, \(w_{ii}=0\)</p>
+              <p>\[ h_i=\sum_j w_{ij}s_j,\qquad s_i\leftarrow\operatorname{sgn}(h_i) \]</p>
+              <p>\[ E(\mathbf s)=-\tfrac12\,\mathbf s^\top W\mathbf s \]</p>
+              <p class="fragment" data-fragment-index="1">
+                <span class="accent">asynchronicznie</span>: \(\Delta E\le 0\) → zawsze punkt stały
+              </p>
+              <p class="fragment" data-fragment-index="2">
+                <span class="accent">synchronicznie</span>: punkt stały <i>albo</i> cykl długości 2
+              </p>
+            </div>
+            <div>
+              <svg class="landscape-svg" id="landscape" viewBox="0 0 760 300"></svg>
+              <div class="anim-controls">
+                <button id="landscape-async" class="primary">asynchronicznie</button>
+                <button id="landscape-sync">synchronicznie</button>
+                <button id="landscape-reset">reset</button>
+              </div>
+            </div>
+          </div>
+          <aside class="notes">
+            ~1:00. Wzorce mają być minimami energii. Pokazać kulkę: w trybie asynchronicznym
+            energia nie rośnie, więc stan stacza się do minimum (wzorca lub stanu fałszywego).
+            W trybie synchronicznym możliwy jest cykl długości 2.
+          </aside>
+        </section>
+
+        <!-- 4 ------------------------------------------------------------ -->
+        <section>
+          <h2>Reguła Hebba: sygnał i&nbsp;przesłuch</h2>
+          <p style="font-size: 0.8em">
+            \[ W=\tfrac1N X^\top X-\tfrac PN I \qquad m_{\mu\nu}=\tfrac1N\,\mathbf x^\mu\!\cdot\mathbf x^\nu \]
+          </p>
+          <div class="fragment" style="font-size: 0.8em">
+            \[ h_i^\nu=\underbrace{\Bigl(1-\tfrac PN\Bigr)x_i^\nu}_{\color{#16a34a}\text{sygnał}}
+            +\underbrace{\sum_{\mu\ne\nu}x_i^\mu m_{\mu\nu}}_{\color{#dc2626}\text{przesłuch}} \]
+          </div>
+          <div class="cols">
+            <div class="card fragment">
+              Piksel niestabilny \(\iff C_i^\nu=-x_i^\nu\sum_{\mu\ne\nu}x_i^\mu m_{\mu\nu}>1-\tfrac PN\)
+              <br /><small>warunek dokładny — wskazuje, które pary wzorców psują stabilność</small>
+            </div>
+            <div class="card blue fragment">
+              Wzorce losowe: \(P_\text{błąd}=\tfrac12\operatorname{erfc}\sqrt{N/2P}\), pojemność
+              \(\alpha_c\approx0{,}138\)
+              <br /><small>korelacje zwiększają przesłuch → mniejsza pojemność</small>
+            </div>
+          </div>
+          <aside class="notes">
+            ~1:00. Kluczowa intuicja całego projektu: przesłuch rośnie z nakładaniem wzorców,
+            a nie tylko z ich liczbą.
+          </aside>
+        </section>
+
+        <!-- 5 ------------------------------------------------------------ -->
+        <section>
+          <h2>Reguła Oji = neuronowe PCA</h2>
+          <div class="cols wide-right">
+            <div style="font-size: 0.72em">
+              <p>\[ \Delta\mathbf w=\eta\,y\,(\mathbf x-y\,\mathbf w),\quad y=\mathbf w^\top\mathbf x \]</p>
+              <ul>
+                <li>człon \(-\eta y^2\mathbf w\) normalizuje wagi: \(\lVert\mathbf w\rVert\to1\)</li>
+                <li>jedyny stabilny punkt: <b>pierwsza składowa główna</b> \(\mathbf v_1\)</li>
+                <li class="fragment">
+                  w sieci Hopfielda <i>każdy</i> wiersz \(W\) → \(\pm\mathbf v_1\)
+                  ⇒ \(W\approx c\,\mathbf v_1\mathbf v_1^\top\), <span class="accent">rząd 1</span>
+                </li>
+                <li class="fragment">tylko dwa atraktory \(\pm\operatorname{sgn}(\mathbf v_1)\)</li>
+                <li class="fragment">krok musi spełniać \(\eta N\lesssim1\) (przyjęto \(0{,}1/N\))</li>
+              </ul>
+            </div>
+            <div>
+              <canvas class="oja-canvas" id="oja-canvas" width="520" height="420"></canvas>
+              <div class="oja-info" id="oja-info"></div>
+              <div class="anim-controls">
+                <button id="oja-run" class="primary">uczenie</button>
+                <button id="oja-reset">reset</button>
+              </div>
+            </div>
+          </div>
+          <aside class="notes">
+            ~1:00. Animacja 2D: sześć wektorów wag (wiersze W) uczonych regułą Oji na tej samej
+            chmurze punktów — wszystkie obracają się do kierunku PC1 i mają normę 1. Dlatego
+            sieć ma macierz rzędu 1.
+          </aside>
+        </section>
+
+        <!-- 6 ------------------------------------------------------------ -->
+        <section>
+          <h2>Punkt odniesienia: reguła projekcyjna</h2>
+          <p style="font-size: 0.8em">
+            \[ W=X^\top(XX^\top)^{+}X,\qquad w_{ii}\leftarrow0 \]
+          </p>
+          <ul style="font-size: 0.8em">
+            <li>rzut ortogonalny na podprzestrzeń wzorców: \(W\mathbf x^\mu=\mathbf x^\mu\)</li>
+            <li class="fragment">przesłuch znika <b>niezależnie od korelacji</b></li>
+            <li class="fragment">
+              lokalna wersja iteracyjna: reguła delta (Widrow–Hoff), zbieżna do projekcyjnej
+            </li>
+            <li class="fragment">
+              pozwala oddzielić ograniczenia <i>architektury</i> od ograniczeń <i>reguły uczenia</i>
+            </li>
+          </ul>
+          <aside class="notes">~0:40. Dodaliśmy ją, bo Oja nie zapamiętuje nic.</aside>
+        </section>
+
+        <!-- 7 ------------------------------------------------------------ -->
+        <section>
+          <h2>Implementacja</h2>
+          <div class="cols wide-left">
+            <ul style="font-size: 0.66em">
+              <li><code>HopfieldBase</code>: dynamika sync/async, wykrywanie punktów stałych i&nbsp;cykli, energia, wizualizacja</li>
+              <li><code>Hopfield</code>: jawna macierz \(N\times N\), reguły Hebba, Oji, delta, projekcyjna</li>
+              <li class="fragment">
+                <code>LowRankHopfield</code>: \(W=A^\top X-\operatorname{diag}(\mathbf d)\),
+                pamięć \(O(PN)\) zamiast \(O(N^2)\), aktualizacja async \(O(P)\) → koty
+                \(N=60\,000\)
+              </li>
+              <li class="fragment">23 testy jednostkowe (energia, cykle, zgodność wersji gęstej i&nbsp;niskorzędowej)</li>
+              <li class="fragment">jeden skrypt odtwarza wszystkie wyniki, tabele i&nbsp;rysunki raportu</li>
+            </ul>
+            <div>
+              <img src="../report/figures/convergence_sync.png" style="max-height: 230px" alt="sync" />
+              <div class="caption">OCRA, 40% szumu, reguła projekcyjna: zbieżność w&nbsp;2 krokach</div>
+            </div>
+          </div>
+          <aside class="notes">~0:50. Krótko o kodzie; szczegóły w raporcie.</aside>
+        </section>
+
+        <!-- 8 ------------------------------------------------------------ -->
+        <section data-demo="main">
+          <h2>Demo na żywo</h2>
+          <div class="demo" id="demo-main"></div>
+          <aside class="notes">
+            ~2:00. Scenariusz: (1) large-25x25, Hebb, 30% szumu, async — odtworzenie wzorca,
+            energia maleje; (2) ten sam szum w trybie sync; (3) animals-14x9, Hebb, wzorzec
+            niestabilny (czerwona ramka) → stan fałszywy; (4) przełączyć na projekcyjną →
+            odtworzenie; (5) Oja → zawsze ten sam stan.
+          </aside>
+        </section>
+
+        <!-- 9 ------------------------------------------------------------ -->
+        <section>
+          <h2>Stabilność wzorców uczących</h2>
+          <div class="cols wide-left">
+            <table id="stability-table"></table>
+            <div>
+              <div class="card fragment">
+                Wszystkie zbiory mają \(P/N\lesssim0{,}10<0{,}138\), a&nbsp;mimo to Hebb zapamiętuje
+                poprawnie tylko <code>large-25x25</code>.
+              </div>
+              <div class="card fragment" style="margin-top: 0.5em">
+                Decydują <b>korelacje</b> (wspólne tło liter: \(|m|\approx0{,}7\)–\(0{,}8\)), a&nbsp;nie liczba
+                wzorców.
+              </div>
+              <div class="card blue fragment" style="margin-top: 0.5em">
+                Oja: 0 stabilnych wzorców w&nbsp;każdym zbiorze. Projekcyjna: wszystkie.
+              </div>
+            </div>
+          </div>
+          <aside class="notes">
+            ~1:00. Tabela: liczba stabilnych wzorców. Warunek z przesłuchu daje te same liczby
+            co symulacja (z definicji), ale wskazuje przyczynę.
+          </aside>
+        </section>
+
+        <!-- 10 ----------------------------------------------------------- -->
+        <section>
+          <h2>25×25 kontra 25×50</h2>
+          <div class="wide-stage">
+            <canvas class="wide-bitmap" id="wide-bitmap" width="175" height="350"></canvas>
+            <canvas class="wide-heatmap" id="wide-heatmap" width="330" height="330"></canvas>
+            <div class="wide-numbers">
+              <div>średnie \(|m_{\mu\nu}|\)<div class="big-number" id="wide-m">0,14</div></div>
+              <div>stabilne (Hebb)<div class="big-number" id="wide-hebb">5/6</div></div>
+              <div class="fragment" data-anim="wide" style="font-size: 0.85em">
+                + stały biały blok 25×25, więc \(m' = (m+1)/2\)
+              </div>
+              <div class="fragment" data-anim="control" style="font-size: 0.85em">
+                kontrola: losowa, różna dla każdego wzorca druga połowa
+              </div>
+            </div>
+          </div>
+          <p class="fragment muted" style="font-size: 0.6em">
+            Więcej neuronów pomaga tylko wtedy, gdy niosą informację różnicującą wzorce.
+          </p>
+          <aside class="notes">
+            ~1:10. 25x50 to te same wzorce + wspólny biały blok. Nakładania rosną do ~0,57,
+            przesłuch przewyższa sygnał, żaden wzorzec nie jest stabilny. Kontrola z losową
+            połową: |m| = 0,08 i Hebb zapamiętuje 6/6.
+          </aside>
+        </section>
+
+        <!-- 11 ----------------------------------------------------------- -->
+        <section>
+          <h2>Odtwarzanie z&nbsp;uszkodzonego wejścia</h2>
+          <img src="../report/figures/noise_exact_a.png" style="max-height: 300px" alt="noise" />
+          <div class="stats" id="noise-stats"></div>
+          <aside class="notes">
+            ~1:00. Hebb odtwarza dokładnie tylko wzorce stabilne; projekcyjna ma baseny do
+            30–40% szumu, ale maleją z obciążeniem i korelacją (26 liter poniżej 5%).
+          </aside>
+        </section>
+
+        <!-- 12 ----------------------------------------------------------- -->
+        <section>
+          <h2>Podobieństwo wzorców i&nbsp;losowe wejście</h2>
+          <img src="../report/figures/similar_vs_diverse.png" style="width: 100%; max-height: 225px; object-fit: contain" alt="similar" />
+          <div class="caption">Hebb: im bardziej podobne wzorce, tym mniej dokładnych odtworzeń</div>
+          <div class="cols">
+            <div>
+              <img src="../report/figures/random_input.png" style="max-height: 260px" alt="random" />
+              <div class="caption">losowe wejście (async): stany fałszywe, negatywy</div>
+            </div>
+            <ul style="font-size: 0.6em">
+              <li class="fragment">Hebb + zbiory skorelowane: 200 wejść → 2–3 stany (stan mieszany i&nbsp;jego negatyw)</li>
+              <li class="fragment">Oja: dwa atraktory \(\pm\operatorname{sgn}(\mathbf v_1)\); projekcyjna: ok. 22–43% wejść → wzorzec</li>
+              <li class="fragment">negatywy tak samo częste jak wzorce, bo \(E(-\mathbf s)=E(\mathbf s)\)</li>
+            </ul>
+          </div>
+          <aside class="notes">~1:00.</aside>
+        </section>
+
+        <!-- 13 ----------------------------------------------------------- -->
+        <section>
+          <h2>Możliwie liczny zbiór stabilnych wzorców 5×5</h2>
+          <div class="cols wide-left">
+            <img src="../report/figures/stable_5x5.png" style="max-height: 420px" alt="5x5" />
+            <div>
+              <div class="big-number" id="n5x5">19</div>
+              <div class="muted" style="font-size: 0.6em">wzorców ściśle stabilnych (Hebb)</div>
+              <p style="font-size: 0.6em" class="fragment">
+                wobec \(0{,}138N\approx3{,}5\) dla wzorców losowych — wyżarzanie dobiera przesłuch
+                tak, by nigdzie nie przeważał nad sygnałem
+              </p>
+              <p style="font-size: 0.6em" class="fragment" id="n5x5-cost"></p>
+            </div>
+          </div>
+          <aside class="notes">~0:50.</aside>
+        </section>
+
+        <!-- 14 ----------------------------------------------------------- -->
+        <section data-demo="osc">
+          <h2>Oscylacja: cykl długości 2</h2>
+          <div class="cols wide-right">
+            <div style="font-size: 0.66em">
+              <p>Jeden wzorzec \(\mathbf x\) (litera X), wejście ortogonalne \(\mathbf x\cdot\mathbf s=0\):</p>
+              <p>\[ \mathbf h=\tfrac1N\mathbf x(\mathbf x\cdot\mathbf s)-\tfrac1N\mathbf s=-\tfrac1N\mathbf s \]</p>
+              <p class="fragment">synchronicznie: \(\mathbf s\to-\mathbf s\to\mathbf s\), \(E=0{,}5\) stale</p>
+              <p class="fragment">asynchronicznie: pierwsza zmiana psuje ortogonalność → zbieżność</p>
+            </div>
+            <div class="demo compact" id="demo-osc"></div>
+          </div>
+          <aside class="notes">
+            ~1:00. Przełączyć na synchr. i nacisnąć Odtwarzaj: cała bitmapa miga. Potem asynchr.
+          </aside>
+        </section>
+
+        <!-- 15 ----------------------------------------------------------- -->
+        <section>
+          <h2>Duże bitmapy: koty 200×300</h2>
+          <img src="../report/figures/cats.png" style="max-height: 190px" alt="cats" />
+          <div class="cols">
+            <img src="../report/figures/cats_examples.png" style="max-height: 230px" class="fragment" alt="cats examples" />
+            <ul style="font-size: 0.6em">
+              <li>\(N=60\,000\): macierz wag miałaby 14,4&nbsp;GB → <code>LowRankHopfield</code></li>
+              <li class="fragment">binaryzacja progiem = mediana: \(|m|\approx0{,}07\), \(P/N=1{,}7\cdot10^{-4}\)</li>
+              <li class="fragment">Hebb i&nbsp;projekcyjna: 10/10 stabilnych, zwykle <b>1 krok</b> nawet przy 45% szumu</li>
+              <li class="fragment">Oja (50×75): 0/10, wyrównanie z&nbsp;\(\mathbf v_1\) = 0,79</li>
+            </ul>
+          </div>
+          <aside class="notes">
+            ~1:00. W reżimie małego obciążenia i zrównoważonych wzorców Hebb działa świetnie.
+          </aside>
+        </section>
+
+        <!-- 16 ----------------------------------------------------------- -->
+        <section>
+          <h2>Wnioski</h2>
+          <ol style="font-size: 0.72em">
+            <li class="fragment">Stabilność przy regule Hebba w&nbsp;pełni wyjaśnia <b>przesłuch</b>; o&nbsp;pojemności decydują korelacje wzorców</li>
+            <li class="fragment">Reguła Oji jest algorytmem PCA → macierz rzędu 1, dwa atraktory, brak pamięci wielu wzorców</li>
+            <li class="fragment">Reguła projekcyjna usuwa przesłuch: wszystkie wzorce stabilne, baseny do 30–40% szumu</li>
+            <li class="fragment">25×50 = 25×25 + wspólny blok: więcej neuronów nie pomaga bez nowej informacji</li>
+            <li class="fragment">Async zawsze zbieżna; sync może oscylować (wejście ortogonalne do wzorców)</li>
+            <li class="fragment">Wzorce dobrane celowo przekraczają statystyczną pojemność (19 wzorców 5×5)</li>
+          </ol>
+          <aside class="notes">~1:00.</aside>
+        </section>
+
+        <!-- 17 ----------------------------------------------------------- -->
+        <section>
+          <h2>Bibliografia</h2>
+          <ul style="font-size: 0.55em">
+            <li>J.&nbsp;J. Hopfield, <i>Neural networks and physical systems with emergent collective computational abilities</i>, PNAS 79 (1982)</li>
+            <li>D.&nbsp;O. Hebb, <i>The Organization of Behavior</i>, Wiley (1949)</li>
+            <li>E. Oja, <i>Simplified neuron model as a principal component analyzer</i>, J. Math. Biol. 15 (1982)</li>
+            <li>L. Personnaz, I. Guyon, G. Dreyfus, <i>Information storage and retrieval in spin-glass like neural networks</i>, J. Phys. Lett. 46 (1985)</li>
+            <li>D.&nbsp;J. Amit, H. Gutfreund, H. Sompolinsky, <i>Spin-glass models of neural networks</i>, Phys. Rev. A 32 (1985)</li>
+            <li>J. Hertz, A. Krogh, R.&nbsp;G. Palmer, <i>Introduction to the Theory of Neural Computation</i>, Addison-Wesley (1991)</li>
+          </ul>
+          <h1 style="margin-top: 1.2em; text-align: center">Dziękujemy!</h1>
+          <aside class="notes">Pytania.</aside>
+        </section>
+      </div>
+    </div>
+
+    <script src="vendor/reveal.js/dist/reveal.js"></script>
+    <script src="vendor/reveal.js/dist/plugin/notes.js"></script>
+    <script src="vendor/reveal.js/dist/plugin/math.js"></script>
+    <script src="data/patterns.js"></script>
+    <script src="js/hopfield.js"></script>
+    <script src="js/demo.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

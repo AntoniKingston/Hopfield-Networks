@@ -1,0 +1,516 @@
+/* Custom theme on top of reveal.js "white". */
+:root {
+  --accent: #e8590c;
+  --accent-soft: #fff1e6;
+  --ink: #1f2937;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --blue: #2563eb;
+  --ok: #16a34a;
+  --bad: #dc2626;
+  --r-main-font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --r-heading-font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --r-main-color: var(--ink);
+  --r-heading-color: var(--ink);
+  --r-link-color: var(--accent);
+  --r-main-font-size: 30px;
+  --r-heading-text-transform: none;
+  --r-heading-font-weight: 700;
+  --r-heading-letter-spacing: -0.01em;
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal .slides section {
+  height: 100%;
+}
+
+.reveal h1 {
+  font-size: 2.1em;
+}
+
+.reveal h2 {
+  font-size: 1.45em;
+  margin-bottom: 0.55em;
+  padding-bottom: 0.2em;
+  border-bottom: 3px solid var(--accent);
+  display: inline-block;
+}
+
+.reveal h3 {
+  font-size: 1.05em;
+  color: var(--muted);
+}
+
+.reveal ul,
+.reveal ol {
+  display: block;
+  margin-left: 1.1em;
+}
+
+.reveal li {
+  margin: 0.25em 0;
+}
+
+.reveal li::marker {
+  color: var(--accent);
+}
+
+.reveal small,
+.reveal .muted {
+  color: var(--muted);
+}
+
+.reveal .accent {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.reveal .big-number {
+  font-size: 2.4em;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.reveal code {
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  font-size: 0.85em;
+  background: #f1f5f9;
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+}
+
+.reveal img {
+  max-height: 520px;
+  margin: 0.2em auto;
+  display: block;
+}
+
+.reveal .caption {
+  font-size: 0.55em;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* layout helpers */
+.cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2em;
+  align-items: center;
+}
+
+.cols.wide-left {
+  grid-template-columns: 1.4fr 1fr;
+}
+
+.cols.wide-right {
+  grid-template-columns: 1fr 1.4fr;
+}
+
+.card {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.5em 0.8em;
+  font-size: 0.8em;
+}
+
+.card.blue {
+  border-left-color: var(--blue);
+}
+
+.stats {
+  display: flex;
+  gap: 1.4em;
+  margin-top: 0.4em;
+}
+
+.stats > div {
+  text-align: center;
+  font-size: 0.6em;
+  color: var(--muted);
+}
+
+/* title slide */
+.title-slide {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.title-slide h1 {
+  border-bottom: 5px solid var(--accent);
+  padding-bottom: 0.2em;
+}
+
+.title-slide .authors {
+  font-size: 0.9em;
+  margin-top: 1em;
+}
+
+.title-pixels {
+  display: grid;
+  grid-template-columns: repeat(14, 18px);
+  gap: 2px;
+  margin-top: 1.2em;
+}
+
+.title-pixels span {
+  width: 18px;
+  height: 18px;
+  background: var(--ink);
+  transition: background 0.4s;
+}
+
+.title-pixels span.on {
+  background: #fff;
+  outline: 1px solid var(--line);
+}
+
+/* tables */
+.reveal table {
+  font-size: 0.6em;
+  border-collapse: collapse;
+  margin: 0.3em 0;
+}
+
+.reveal table th {
+  border-bottom: 2px solid var(--ink);
+}
+
+.reveal table td,
+.reveal table th {
+  padding: 0.22em 0.6em;
+  text-align: center;
+}
+
+.reveal table td:first-child,
+.reveal table th:first-child {
+  text-align: left;
+  font-family: ui-monospace, monospace;
+}
+
+.reveal table tr.hl td {
+  background: var(--accent-soft);
+}
+
+.cell-ok {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.cell-bad {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+/* energy landscape */
+svg.landscape-svg {
+  width: 100%;
+  height: auto;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+svg .landscape {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 4;
+}
+
+svg .trail {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-dasharray: 4 5;
+}
+
+svg .ball {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 3;
+}
+
+svg .well-label {
+  font-size: 17px;
+  fill: var(--muted);
+  text-anchor: middle;
+}
+
+svg .energy-readout {
+  font-size: 18px;
+  fill: var(--accent);
+  font-weight: 600;
+}
+
+/* buttons shared by demo and animations */
+.reveal button {
+  font: inherit;
+  font-size: 0.55em;
+  padding: 0.3em 0.8em;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.reveal button:hover {
+  border-color: var(--accent);
+}
+
+.reveal button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.anim-controls {
+  display: flex;
+  gap: 0.5em;
+  margin-top: 0.3em;
+}
+
+/* live demo */
+.demo {
+  font-size: 0.6em;
+}
+
+.demo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6em 1em;
+  align-items: center;
+  margin-bottom: 0.35em;
+}
+
+.demo-controls label {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.demo button,
+.demo select {
+  font-size: 0.95em;
+}
+
+.demo select {
+  font: inherit;
+  padding: 0.15em 0.3em;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+.demo input[type="range"] {
+  width: 140px;
+  accent-color: var(--accent);
+}
+
+.demo .val {
+  min-width: 2.6em;
+  font-variant-numeric: tabular-nums;
+}
+
+.seg {
+  display: inline-flex;
+}
+
+.seg button {
+  border-radius: 0;
+}
+
+.seg button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.seg button:last-child {
+  border-radius: 0 6px 6px 0;
+  margin-left: -1px;
+}
+
+.seg button.on {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.demo-main {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 1.2em;
+}
+
+.demo-state {
+  width: 420px;
+  height: 420px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.demo-energy {
+  width: 100%;
+  max-width: 520px;
+  height: 150px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.demo-caption {
+  color: var(--muted);
+  margin: 0.2em 0;
+}
+
+.demo-counter {
+  color: var(--muted);
+  text-align: center;
+}
+
+.demo-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+
+.thumb {
+  width: 70px;
+  padding: 4px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.thumb canvas {
+  width: 60px;
+  height: 60px;
+  display: block;
+  margin: 0 auto;
+}
+
+.thumb.target {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.thumb.unstable canvas {
+  outline: 2px solid var(--bad);
+}
+
+.thumb.stable canvas {
+  outline: 2px solid var(--ok);
+}
+
+.thumb .bar {
+  position: relative;
+  height: 7px;
+  background: var(--line);
+  margin-top: 5px;
+  border-radius: 3px;
+}
+
+.thumb .bar::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  height: 11px;
+  border-left: 1px solid var(--muted);
+}
+
+.thumb .fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.15s, left 0.15s;
+}
+
+.thumb .fill.neg {
+  background: var(--blue);
+}
+
+.thumb .mval {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.demo-status {
+  margin-top: 0.4em;
+  padding: 0.3em 0.6em;
+  border-radius: 6px;
+  background: #f1f5f9;
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-status.done-fixed {
+  background: #dcfce7;
+}
+
+.demo-status.done-cycle {
+  background: #fef3c7;
+}
+
+/* oscillation demo is narrower */
+.demo.compact .demo-main {
+  grid-template-columns: 300px 1fr;
+}
+
+.demo.compact .demo-state {
+  width: 300px;
+  height: 300px;
+}
+
+/* Oja toy and 25x50 transition */
+canvas.oja-canvas {
+  width: 520px;
+  height: 420px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.oja-info {
+  font-size: 0.55em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.wide-stage {
+  display: flex;
+  gap: 1.6em;
+  align-items: flex-start;
+}
+
+canvas.wide-bitmap {
+  width: 175px;
+  height: 350px;
+}
+
+canvas.wide-heatmap {
+  width: 330px;
+  height: 330px;
+}
+
+.wide-numbers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+  font-size: 0.75em;
+}
+
+.wide-numbers .big-number {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

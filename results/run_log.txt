@@ -1,17 +1,17 @@
-seed = 2026
+seed = 2137
 [q1] ...
-[q1] done in 37s
+[q1] done in 43s
 [q3] ...
 25x50 top half equals 25x25: True | bottom half constant +1: True
-[q3] done in 42s
+[q3] done in 49s
 [q4] ...
-[q4] done in 34s
+[q4] done in 41s
 [q6] ...
-[q6] done in 10s
+[q6] done in 11s
 [q7] ...
-[q7] done in 35s
+[q7] done in 26s
 [q8] ...
 [q8] done in 0s
 [q9] ...
-  large-bitmap experiment: 116s
-[q9] done in 118s
+  large-bitmap experiment: 144s
+[q9] done in 146s
