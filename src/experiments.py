@@ -15,26 +15,35 @@ from hopfield_datasets import (
 )
 
 SEED = 2137
-RULES = ["hebb", "oja", "projection"]
+RULES = ["hebb", "oja", "oja_subspace", "projection"]
 MODES = ["sync", "async"]
 NOISE_LEVELS = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
 OJA_PARAMS = {"epochs": 100, "init": "hebb"}  # learning rate 0.1 / N
+OJA_SUBSPACE_PARAMS = {"epochs": 1000, "init": "hebb"}  # learning rate 0.5 / lambda_max(X X^T)
 
 _cache: dict[tuple, Hopfield] = {}
 
 
+def train_network(dataset: Dataset, rule: str, seed: int = SEED, **params) -> Hopfield:
+    """Dense network trained with `rule` (not cached); Oja variants use their default params
+    unless overridden. `seed` drives the pattern order and random initial weights."""
+    net = Hopfield(dataset.shape, dataset.patterns)
+    if rule == "oja":
+        net.oja_train(seed=seed, **{**OJA_PARAMS, **params})
+    elif rule == "oja_subspace":
+        net.oja_subspace_train(seed=seed, **{**OJA_SUBSPACE_PARAMS, **params})
+    elif rule == "delta":
+        net.delta_train(seed=seed, **params)
+    else:
+        net.train(rule, **params)
+    return net
+
+
 def trained_network(dataset: Dataset, rule: str, seed: int = SEED, **params) -> Hopfield:
-    """Dense network trained with `rule`; Oja uses OJA_PARAMS unless overridden."""
+    """Cached `train_network`."""
     key = (dataset.name, rule, seed, tuple(sorted(params.items())))
     if key not in _cache:
-        net = Hopfield(dataset.shape, dataset.patterns)
-        if rule == "oja":
-            net.oja_train(seed=seed, **{**OJA_PARAMS, **params})
-        elif rule == "delta":
-            net.delta_train(seed=seed, **params)
-        else:
-            net.train(rule, **params)
-        _cache[key] = net
+        _cache[key] = train_network(dataset, rule, seed, **params)
     return _cache[key]
 
 
@@ -75,7 +84,7 @@ def dataset_table(names: Iterable[str] = DATASETS) -> pd.DataFrame:
 
 def stability_table(
     names: Iterable[str] = DATASETS,
-    rules: Iterable[str] = ("hebb", "oja", "delta", "projection"),
+    rules: Iterable[str] = ("hebb", "oja", "oja_subspace", "delta", "projection"),
     seed: int = SEED,
 ) -> pd.DataFrame:
     rows = []
@@ -106,7 +115,8 @@ def oja_trajectory(
     epochs: int = 100,
     seed: int = SEED,
 ) -> pd.DataFrame:
-    """Stable patterns and alignment with the first principal component after every Oja epoch.
+    """Single-neuron Oja rule: stable patterns and alignment with the first principal component
+    after every epoch (epoch 0 = initial weights).
 
     The learning rate is `relative_rate / N`; diverging runs end with a row with `diverged`.
     """
@@ -116,33 +126,13 @@ def oja_trajectory(
         for init in inits:
             for c in relative_rates:
                 net = Hopfield(d.shape, d.patterns)
-                net._init_weights(init, seed)
-                for epoch in range(epochs + 1):
-                    if epoch > 0:
-                        try:
-                            net.oja_train(
-                                learning_rate=c / d.n_neurons,
-                                epochs=1,
-                                init="current",
-                                seed=seed + epoch,
-                            )
-                        except FloatingPointError:
-                            rows.append(
-                                {
-                                    "dataset": name,
-                                    "init": init,
-                                    "relative_rate": c,
-                                    "epoch": epoch,
-                                    "diverged": True,
-                                }
-                            )
-                            break
-                    s = np.linalg.svd(net.weights, compute_uv=False)
+                base = {"dataset": name, "init": init, "relative_rate": c}
+
+                def record(epoch, W, net=net, base=base):
+                    s = np.linalg.svd(W, compute_uv=False)
                     rows.append(
-                        {
-                            "dataset": name,
-                            "init": init,
-                            "relative_rate": c,
+                        base
+                        | {
                             "diverged": False,
                             "epoch": epoch,
                             "stable": int(net.stable_patterns().sum()),
@@ -150,6 +140,64 @@ def oja_trajectory(
                             "top_singular_share": float(s[0] ** 2 / (s**2).sum()),
                         }
                     )
+
+                try:
+                    net.oja_train(
+                        learning_rate=c / d.n_neurons,
+                        epochs=epochs,
+                        init=init,
+                        tol=0,
+                        seed=seed,
+                        callback=record,
+                    )
+                except FloatingPointError:
+                    rows.append(base | {"diverged": True, "epoch": rows[-1]["epoch"] + 1})
+    return pd.DataFrame(rows)
+
+
+def oja_subspace_trajectory(
+    names: Iterable[str] = ("small-7x7", "animals-14x9", "large-25x25", "letters-14x20"),
+    relative_rates: Iterable[float] = (0.25, 0.5, 1.0),
+    inits: Iterable[str] = ("hebb", "random"),
+    epochs: int = 300,
+    seed: int = SEED,
+) -> pd.DataFrame:
+    """Oja's subspace rule: stable patterns, distance to the projection-rule weights and the
+    reconstruction error after every epoch. The learning rate is `relative_rate / lambda_max`.
+    """
+    rows = []
+    for name in names:
+        d = load_dataset(name)
+        X = d.patterns
+        lam_max = float(np.linalg.eigvalsh(X @ X.T)[-1])
+        proj = trained_network(d, "projection")
+        for init in inits:
+            for c in relative_rates:
+                net = Hopfield(d.shape, X)
+                base = {"dataset": name, "init": init, "relative_rate": c}
+
+                def record(epoch, W, net=net, base=base, target=proj.weights):
+                    rows.append(
+                        base
+                        | {
+                            "diverged": False,
+                            "epoch": epoch,
+                            "stable": int(net.stable_patterns().sum()),
+                            "dist_projection": float(np.abs(W - target).max()),
+                        }
+                    )
+
+                try:
+                    net.oja_subspace_train(
+                        learning_rate=c / lam_max,
+                        epochs=epochs,
+                        init=init,
+                        tol=0,
+                        seed=seed,
+                        callback=record,
+                    )
+                except FloatingPointError:
+                    rows.append(base | {"diverged": True, "epoch": rows[-1]["epoch"] + 1})
     return pd.DataFrame(rows)
 
 
@@ -282,6 +330,219 @@ def summarize_recovery(df: pd.DataFrame) -> pd.DataFrame:
         steps=("steps", "mean"),
     )
     return out.reset_index()
+
+
+def grouped_and_diverse_sets(
+    source: str = "large-25x25.plus",
+    groups: int = 3,
+    members: int = 3,
+    flips: Iterable[float] = (0.05, 0.1, 0.2),
+    rep: int = 0,
+    seed: int = SEED,
+    return_prototypes: bool = False,
+):
+    """Sets of the same size P = groups * members and the same N, built from `source`.
+
+    `diverse`: P distinct images. `grouped (q)`: `groups` images, each replaced by `members`
+    variants with a fraction q of the pixels flipped, so members of a group are similar
+    (overlap ~ (1 - 2q)^2) and groups are as different as the source images.
+    With `return_prototypes` also returns the source image of every group (groups x N).
+    """
+    src = load_dataset(source)
+    rng = _rng(seed, 11, rep)
+    P = groups * members
+    sets = [
+        Dataset(
+            f"zróżnicowany #{rep}", src.patterns[rng.permutation(src.n_patterns)[:P]], src.shape
+        )
+    ]
+    prototypes = src.patterns[rng.permutation(src.n_patterns)[:groups]]
+    for q in flips:
+        X = np.array([HopfieldBase.corrupt(p, q, rng) for p in prototypes for _ in range(members)])
+        sets.append(Dataset(f"grupy q={q:g} #{rep}", X, src.shape))
+    return (sets, prototypes) if return_prototypes else sets
+
+
+def group_prototype_attraction(
+    reps: int = 5,
+    noise: float = 0.1,
+    rules: Iterable[str] = ("hebb", "projection"),
+    members: int = 3,
+    seed: int = SEED,
+) -> pd.DataFrame:
+    """For the grouped sets: mean overlap of the final state (async, `noise` flipped pixels)
+    with the corrupted member and with the source image of its group, which the network never
+    saw. A larger overlap with the source image means the net recalls the group average."""
+    rows = []
+    for rep in range(reps):
+        sets, prototypes = grouped_and_diverse_sets(rep=rep, seed=seed, return_prototypes=True)
+        for d in sets[1:]:
+            for rule in rules:
+                net = train_network(d, rule, seed + rep)
+                rng = _rng(seed, 12, rep)
+                for mu in range(d.n_patterns):
+                    x = net.corrupt(d.patterns[mu], noise, rng)
+                    s = net.run(x, mode="async", seed=rng).state
+                    rows.append(
+                        {
+                            "set": d.name.split(" #")[0],
+                            "rep": rep,
+                            "rule": rule,
+                            "overlap_member": float(d.patterns[mu] @ s / d.n_neurons),
+                            "overlap_prototype": float(prototypes[mu // members] @ s / d.n_neurons),
+                        }
+                    )
+    return (
+        pd.DataFrame(rows)
+        .groupby(["set", "rule"])[["overlap_member", "overlap_prototype"]]
+        .mean()
+        .reset_index()
+    )
+
+
+def similar_vs_diverse_controlled(
+    reps: int = 5,
+    rules: Iterable[str] = RULES,
+    noise_levels: Iterable[float] = (0.05, 0.1, 0.2, 0.3),
+    trials: int = 5,
+    seed: int = SEED,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Q5 with N and P fixed: stability and recovery (async) for grouped vs diverse sets.
+
+    Every repetition draws new images, new variants, new corruptions and a new Oja order, so the
+    spread over `reps` also measures repeatability. Returns (stability, recovery summary).
+    """
+    rules = list(rules)
+    stab_rows, recovery = [], []
+    for rep in range(reps):
+        sets = grouped_and_diverse_sets(rep=rep, seed=seed)
+        nets = {(d.name, r): train_network(d, r, seed + rep) for d in sets for r in rules}
+        for d in sets:
+            kind = d.name.split(" #")[0]
+            stats = pattern_stats(d.patterns)
+            for rule in rules:
+                net = nets[(d.name, rule)]
+                stab_rows.append(
+                    {
+                        "set": kind,
+                        "rep": rep,
+                        "rule": rule,
+                        "P": d.n_patterns,
+                        "N": d.n_neurons,
+                        "mean_abs_overlap": stats["mean_abs_overlap"],
+                        "stable": int(net.stable_patterns().sum()),
+                    }
+                )
+        df = noise_recovery(
+            sets, rules, ("async",), noise_levels, trials, seed=seed + rep, networks=nets
+        )
+        df["set"] = df.dataset.str.split(" #").str[0]
+        df["rep"] = rep
+        recovery.append(df)
+    rec = pd.concat(recovery)
+    per_rep = (
+        rec.groupby(["set", "rep", "rule", "noise"])
+        .agg(
+            exact=("outcome", lambda s: (s == "exact").mean()),
+            other=("outcome", lambda s: (s == "other").mean()),
+            overlap=("overlap", "mean"),
+        )
+        .reset_index()
+    )
+    summary = (
+        per_rep.groupby(["set", "rule", "noise"])
+        .agg(
+            exact=("exact", "mean"),
+            exact_std=("exact", "std"),
+            other=("other", "mean"),
+            overlap=("overlap", "mean"),
+            overlap_std=("overlap", "std"),
+        )
+        .reset_index()
+    )
+    return pd.DataFrame(stab_rows), summary
+
+
+# ---------- repeatability ----------
+
+
+def training_repeatability(
+    names: Iterable[str] = DATASETS,
+    rules: Iterable[str] = ("oja", "oja_subspace"),
+    inits: Iterable[str] = ("hebb", "random"),
+    seeds: Iterable[int] = range(10),
+) -> pd.DataFrame:
+    """Train the iterative rules from many seeds (pattern order and, for `random`, the initial
+    weights) and record how much the result depends on the seed.
+
+    Hebb and projection have no random element in training (closed-form weights), so they are
+    listed once with zero spread.
+    """
+    seeds = list(seeds)
+    out = []
+
+    def summarize(name, rule, init, stable, weights):
+        stable = np.array(stable)
+        Ws = np.stack(weights)
+        mean_W = Ws.mean(axis=0)
+        norm = np.linalg.norm(mean_W)
+        spread = np.linalg.norm(Ws - mean_W, axis=(1, 2)).mean() / norm if norm > 0 else 0.0
+        out.append(
+            {
+                "dataset": name,
+                "rule": rule,
+                "init": init,
+                "runs": len(stable),
+                "stable_mean": stable.mean(),
+                "stable_std": stable.std(),
+                "stable_min": stable.min(),
+                "stable_max": stable.max(),
+                "weight_spread": float(spread),
+            }
+        )
+
+    for name in names:
+        d = load_dataset(name)
+        for rule in ("hebb", "projection"):
+            net = trained_network(d, rule)
+            summarize(name, rule, "---", [net.stable_patterns().sum()], [net.weights])
+        for rule in rules:
+            for init in inits:
+                stable, weights = [], []
+                for s in seeds:
+                    net = train_network(d, rule, SEED + s, init=init)
+                    stable.append(int(net.stable_patterns().sum()))
+                    weights.append(net.weights)
+                summarize(name, rule, init, stable, weights)
+    return pd.DataFrame(out)
+
+
+def recall_repeatability(
+    names: Iterable[str] = DATASETS,
+    rules: Iterable[str] = RULES,
+    noise_levels: Iterable[float] = (0.1, 0.2, 0.3),
+    seeds: Iterable[int] = range(5),
+    trials: int = 5,
+) -> pd.DataFrame:
+    """Noise recovery (async) repeated with different seeds: each seed changes the corrupted
+    pixels, the asynchronous update order and the order of Oja's training. Returns the mean,
+    standard deviation and range over seeds of the exact-recall fraction."""
+    datasets = [load_dataset(n) for n in names]
+    rules = list(rules)
+    per_seed = []
+    for s in seeds:
+        nets = {(d.name, r): train_network(d, r, SEED + s) for d in datasets for r in rules}
+        df = noise_recovery(
+            datasets, rules, ("async",), noise_levels, trials, seed=SEED + s, networks=nets
+        )
+        g = df.groupby(["dataset", "rule", "noise"]).outcome.apply(lambda o: (o == "exact").mean())
+        per_seed.append(g.rename("exact").reset_index().assign(seed=s))
+    df = pd.concat(per_seed)
+    return (
+        df.groupby(["dataset", "rule", "noise"])
+        .exact.agg(["mean", "std", "min", "max"])
+        .reset_index()
+    )
 
 
 # ---------- Q6: random input ----------

@@ -51,7 +51,7 @@ def test_zero_field_keeps_state():
     assert np.array_equal(net.recall_async(s, np.random.default_rng(0)), s)
 
 
-@pytest.mark.parametrize("rule", ["hebb", "projection", "oja", "delta"])
+@pytest.mark.parametrize("rule", ["hebb", "projection", "oja", "oja_subspace", "delta"])
 def test_async_energy_never_increases(rule, rng):
     d = load_dataset("animals-14x9")
     net = Hopfield(d.shape, d.patterns)
@@ -97,6 +97,54 @@ def test_oja_moves_towards_principal_component():
     assert np.isfinite(net.weights).all()
     assert net.pc_alignment().mean() > hebb_alignment + 0.1
     assert top_share(net.weights) > hebb_share
+
+
+@pytest.mark.parametrize("name", ["animals-14x9", "letters-abc-8x12"])
+def test_oja_subspace_from_hebb_converges_to_projection(name):
+    d = load_dataset(name)
+    proj = Hopfield(d.shape, d.patterns)
+    proj.projection_train()
+    net = Hopfield(d.shape, d.patterns)
+    net.train("oja_subspace")
+    assert np.allclose(net.weights, net.weights.T)
+    assert np.all(np.diag(net.weights) == 0)
+    assert np.abs(net.weights - proj.weights).max() < 1e-3
+    assert net.stable_patterns(strict=True).all()
+
+
+def test_oja_subspace_from_random_learns_subspace_up_to_sign():
+    d = load_dataset("animals-14x9")
+    X = d.patterns
+    net = Hopfield(d.shape, X)
+    net.oja_subspace_train(init="random", seed=0, epochs=1500)
+    W = net._full_weights[0]
+    assert np.abs(X - X @ W @ W).max() < 1e-3  # W^2 is the projection onto span(X)
+    U = np.linalg.svd(X.T, full_matrices=False)[0]
+    assert np.allclose(np.abs(np.linalg.eigvalsh(U.T @ W @ U)), 1, atol=1e-3)
+
+
+def test_oja_callback_and_current_init():
+    d = load_dataset("small-7x7")
+    net = Hopfield(d.shape, d.patterns)
+    epochs = []
+    net.oja_train(epochs=3, tol=0, callback=lambda e, W: epochs.append(e))
+    assert epochs == [0, 1, 2, 3]
+    continued = Hopfield(d.shape, d.patterns)
+    continued.oja_train(epochs=1, tol=0, seed=1)
+    continued.oja_train(epochs=1, tol=0, init="current", seed=2)
+    assert np.isfinite(continued.weights).all()
+    continued.hebbian_train()  # new weights: "current" must start from them, not the old run
+    hebb = continued.weights.copy()
+    continued.oja_train(epochs=0, init="current")
+    assert np.array_equal(continued.weights, hebb)
+
+
+def test_random_initialization_is_symmetric():
+    net = Hopfield((5, 5), np.ones((1, 25)))
+    W = net.normal_initialization(1 / 25, seed=0)
+    assert np.allclose(W, W.T)
+    assert np.all(np.diag(W) == 0)
+    assert abs(W[~np.eye(25, dtype=bool)].var() - 1 / 25) < 0.01
 
 
 @pytest.mark.parametrize("rule", ["hebb", "projection"])
