@@ -25,7 +25,30 @@ RESULTS = PROJECT_ROOT / "results"
 FIGURES = PROJECT_ROOT / "report" / "figures"
 TABLES = PROJECT_ROOT / "report" / "tables"
 
-RULE_PL = {"hebb": "Hebb", "oja": "Oja", "delta": "delta", "projection": "projekcyjna"}
+RULE_PL = {
+    "hebb": "Hebb",
+    "oja": "Oja",
+    "oja_subspace": "Oja podprz.",
+    "delta": "delta",
+    "projection": "projekcyjna",
+}
+# one-letter tags used above pattern thumbnails: H+ / O- / S+ / P+
+RULE_ABBR = {"hebb": "H", "oja": "O", "oja_subspace": "S", "delta": "D", "projection": "P"}
+RULE_COLORS = {
+    "hebb": "tab:blue",
+    "oja": "tab:orange",
+    "oja_subspace": "tab:purple",
+    "projection": "tab:green",
+}
+# the subspace rule converges to the projection rule, so its curve is dashed to stay visible
+RULE_STYLE = {
+    "hebb": {"marker": "o"},
+    "oja": {"marker": "o"},
+    "oja_subspace": {"marker": "s", "ls": "--"},
+    "projection": {"marker": "o"},
+}
+# drawn last so that it is not hidden under the identical projection-rule curve
+RULE_PLOT_ORDER = ["hebb", "oja", "projection", "oja_subspace"]
 MODE_PL = {"sync": "synchr.", "async": "asynchr."}
 OUTCOME_PL = {
     "exact": "oryginał",
@@ -53,7 +76,8 @@ def save_table(df: pd.DataFrame, name: str, latex: pd.DataFrame | None = None, *
     df.to_csv(RESULTS / f"{name}.csv", index=False)
     table = df if latex is None else latex
     (TABLES / f"{name}.tex").write_text(
-        table.to_latex(index=False, **{"escape": True, "float_format": "%.3f"} | to_latex)
+        table.to_latex(index=False, **{"escape": True, "float_format": "%.3f"} | to_latex),
+        encoding="utf-8",
     )
 
 
@@ -96,11 +120,21 @@ def pattern_grid(patterns, shape, titles=None, colors=None, cols=8, scale=1.2):
 # ---------- Q1/Q2 ----------
 
 
-def q1(args):
+def datasets_table(args):
     data = E.dataset_table()
     latex = data[
-        ["dataset", "shape", "P", "N", "load", "bias", "mean_abs_overlap", "max_abs_overlap"]
-    ]
+        [
+            "dataset",
+            "shape",
+            "P",
+            "N",
+            "load",
+            "bias",
+            "mean_abs_overlap",
+            "max_abs_overlap",
+            "cond",
+        ]
+    ].assign(cond=data["cond"].map(lambda v: f"{v:.0f}"))
     latex = latex.rename(
         columns={
             "dataset": "zbiór",
@@ -109,9 +143,15 @@ def q1(args):
             "bias": "śr. piksel",
             "mean_abs_overlap": "śr. $|m|$",
             "max_abs_overlap": "maks. $|m|$",
+            "cond": "$\\kappa(XX^\\top)$",
         }
     )
     save_table(data, "datasets", latex, escape=False)
+    return data
+
+
+def q1(args):
+    data = datasets_table(args)
 
     stab = E.stability_table()
     save_table(stab, "stability_long")
@@ -125,6 +165,7 @@ def q1(args):
             "Hebb (ścisła)": strict.values,
             "przesłuch": data.set_index("dataset").loc[DATASETS, "hebb_unstable_patterns"].values,
             "Oja": pivot["oja"].values,
+            "Oja podprz.": pivot["oja_subspace"].values,
             "delta": pivot["delta"].values,
             "projekcyjna": pivot["projection"].values,
         }
@@ -134,10 +175,10 @@ def q1(args):
 
     for name in DATASETS:
         d = load_dataset(name)
-        nets = {rule: E.trained_network(d, rule) for rule in ("hebb", "oja", "projection")}
+        nets = {rule: E.trained_network(d, rule) for rule in E.RULES}
         masks = {rule: net.stable_patterns() for rule, net in nets.items()}
         titles = [
-            " ".join(f"{RULE_PL[r][0].upper()}{'+' if masks[r][k] else '-'}" for r in masks)
+            " ".join(f"{RULE_ABBR[r]}{'+' if masks[r][k] else '-'}" for r in masks)
             for k in range(d.n_patterns)
         ]
         colors = ["tab:green" if masks["hebb"][k] else "tab:red" for k in range(d.n_patterns)]
@@ -188,19 +229,53 @@ def q1(args):
     axes[0, -1].legend(fontsize=6, title="inicjalizacja", title_fontsize=6)
     save_fig(fig, "oja_trajectory")
 
-    d = load_dataset("animals-14x9")
-    rows = []
-    for rule in ("hebb", "oja", "projection"):
-        net = E.trained_network(d, rule)
-        rows.append(np.linalg.svd(net.weights, compute_uv=False))
+    sub_traj = E.oja_subspace_trajectory(epochs=60 if args.quick else 300)
+    sub_traj.to_csv(RESULTS / "oja_subspace_trajectory.csv", index=False)
+    plot_oja_subspace_trajectory(sub_traj)
+
+    plot_weight_spectrum()
+
+
+def plot_weight_spectrum(name: str = "animals-14x9"):
+    d = load_dataset(name)
     fig, ax = plt.subplots(figsize=(4, 2.6))
-    for rule, s in zip(("hebb", "oja", "projection"), rows, strict=True):
-        ax.semilogy(s[:20] / s[0], "o-", ms=3, label=RULE_PL[rule])
+    for rule in RULE_PLOT_ORDER:
+        s = np.linalg.svd(E.trained_network(d, rule).weights, compute_uv=False)
+        ax.semilogy(
+            s[:20] / s[0],
+            ls=RULE_STYLE[rule].get("ls", "-"),
+            marker=RULE_STYLE[rule]["marker"],
+            ms=3,
+            label=RULE_PL[rule],
+            color=RULE_COLORS[rule],
+        )
     ax.set_xlabel("numer wartości osobliwej")
     ax.set_ylabel("$\\sigma_k / \\sigma_1$")
-    ax.set_title("Widmo macierzy wag (animals-14x9)")
+    ax.set_title(f"Widmo macierzy wag ({name})")
     ax.legend()
     save_fig(fig, "weight_spectrum")
+
+
+def plot_oja_subspace_trajectory(sub_traj: pd.DataFrame):
+    names = sub_traj.dataset.unique()
+    fig, axes = plt.subplots(2, len(names), figsize=(3.1 * len(names), 5), squeeze=False)
+    for j, name in enumerate(names):
+        d = load_dataset(name)
+        sub = sub_traj[(sub_traj.dataset == name) & ~sub_traj.diverged]
+        for (init, c), g in sub.groupby(["init", "relative_rate"]):
+            ls = "-" if init == "hebb" else "--"
+            init_pl = "Hebb" if init == "hebb" else "losowa"
+            label = f"{init_pl}, $\\eta={c:g}/\\lambda_{{\\max}}$"
+            axes[0, j].plot(g.epoch, g.stable, ls, label=label)
+            axes[1, j].semilogy(g.epoch, g.dist_projection, ls, label=label)
+        axes[1, j].yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+        axes[0, j].axhline(d.n_patterns, color="gray", ls=":", lw=0.8)
+        axes[0, j].set_title(f"{name} (P={d.n_patterns})")
+        axes[0, j].set_ylabel("stabilne wzorce")
+        axes[1, j].set_ylabel(r"$\max|W - W_{\mathrm{proj}}|$")
+        axes[1, j].set_xlabel("epoka")
+    axes[0, -1].legend(fontsize=6, title="inicjalizacja", title_fontsize=6)
+    save_fig(fig, "oja_subspace_trajectory")
 
 
 # ---------- Q3 ----------
@@ -220,6 +295,7 @@ def q3(args):
             "hebb_unstable_bits": "niestab. bity (Hebb)",
             "stable_hebb": "Hebb",
             "stable_oja": "Oja",
+            "stable_oja_subspace": "Oja podprz.",
             "stable_projection": "proj.",
         }
     )
@@ -248,7 +324,7 @@ def q3(args):
 # ---------- Q4/Q5 ----------
 
 
-def plot_recovery(summary, names, fig_name, metric="exact", rules=E.RULES):
+def plot_recovery(summary, names, fig_name, metric="exact", rules=RULE_PLOT_ORDER):
     fig, axes = plt.subplots(
         1, len(names), figsize=(2.6 * len(names), 2.6), sharey=True, squeeze=False
     )
@@ -263,18 +339,22 @@ def plot_recovery(summary, names, fig_name, metric="exact", rules=E.RULES):
                     g.noise,
                     g[metric],
                     "-" if mode == "sync" else "--",
-                    marker="o",
+                    marker=RULE_STYLE[rule]["marker"],
                     ms=2.5,
-                    color={"hebb": "tab:blue", "oja": "tab:orange", "projection": "tab:green"}[
-                        rule
-                    ],
+                    color=RULE_COLORS[rule],
                     label=f"{RULE_PL[rule]}, {MODE_PL[mode]}",
                 )
         ax.set_title(name, fontsize=8)
         ax.set_xlabel("udział odwróconych pikseli")
         ax.set_ylim(-0.05, 1.05)
     axes[0, 0].set_ylabel({"exact": "odtworzono oryginał", "overlap": "nakładanie końcowe"}[metric])
-    axes[0, -1].legend(fontsize=6, loc="lower left")
+    fig.legend(
+        *axes[0, 0].get_legend_handles_labels(),
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.1),
+        ncol=4,
+        fontsize=6,
+    )
     save_fig(fig, fig_name)
 
 
@@ -312,6 +392,7 @@ def q4(args):
             "H: dokł. 30\\%": at("hebb", 0.3, "exact"),
             "H: nakł. 30\\%": at("hebb", 0.3, "overlap"),
             "Oja: nakł. 30\\%": at("oja", 0.3, "overlap"),
+            "S: dokł. 30\\%": at("oja_subspace", 0.3, "exact"),
             "P: dokł. 30\\%": at("projection", 0.3, "exact"),
             "P: $p_{90}$": crit["projection"].values,
         }
@@ -378,7 +459,134 @@ def q4(args):
         res = net.run(x, mode=mode, seed=E.SEED, frames_per_sweep=4)
         hist = res.history
         titles = [f"krok {k}\nE={net.energy(h):.1f}" for k, h in enumerate(hist)]
-        save_fig(pattern_grid(hist, d.shape, titles, cols=8), f"convergence_{mode}")
+        cols = min(5, len(hist))  # the async run has 9 frames: rows of 5 + 4
+        save_fig(pattern_grid(hist, d.shape, titles, cols=cols), f"convergence_{mode}")
+
+
+# ---------- Q5 (controlled): grouped vs diverse sets with the same N and P ----------
+
+Q5_SETS = ["zróżnicowany", "grupy q=0.2", "grupy q=0.1", "grupy q=0.05"]
+
+
+def mean_std(g, col):
+    return f"{g[col].mean():.1f} $\\pm$ {g[col].std(ddof=0):.1f}"
+
+
+def q5(args):
+    stab, summary = E.similar_vs_diverse_controlled(
+        reps=2 if args.quick else 5, trials=2 if args.quick else 5
+    )
+    stab.to_csv(RESULTS / "similar_diverse_stability_raw.csv", index=False)
+    save_table(summary, "similar_diverse_recovery")
+
+    rows = []
+    for name in Q5_SETS:
+        g = stab[stab.set == name]
+        row = {"zbiór": name, "$P$": g.P.iloc[0], "śr. $|m|$": f"{g.mean_abs_overlap.mean():.2f}"}
+        for rule in E.RULES:
+            row[RULE_PL[rule]] = mean_std(g[g.rule == rule], "stable")
+        rows.append(row)
+    table = pd.DataFrame(rows)
+    save_table(table, "similar_diverse_stability", escape=False)
+    plot_similar_diverse(stab, summary)
+    group_prototypes_table(args)
+
+    d = E.grouped_and_diverse_sets(rep=0)
+    shown = [d[0].patterns, d[2].patterns]  # diverse and q = 0.1
+    fig = pattern_grid(np.vstack(shown), d[0].shape, [d[0].name] * 9 + [d[2].name] * 9, cols=9)
+    save_fig(fig, "similar_diverse_sets")
+
+
+def group_prototypes_table(args):
+    proto = E.group_prototype_attraction(reps=2 if args.quick else 5)
+    latex = proto.assign(rule=proto.rule.map(RULE_PL)).rename(
+        columns={
+            "set": "zbiór",
+            "rule": "reguła",
+            "overlap_member": "nakł. z wariantem",
+            "overlap_prototype": "nakł. z obrazem źródłowym",
+        }
+    )
+    save_table(proto, "group_prototypes", latex, float_format="%.2f")
+
+
+def plot_similar_diverse(stab: pd.DataFrame, summary: pd.DataFrame):
+    fig, axes = plt.subplots(1, len(Q5_SETS), figsize=(2.8 * len(Q5_SETS), 2.7), sharey=True)
+    for ax, name in zip(axes, Q5_SETS, strict=True):
+        for rule in RULE_PLOT_ORDER:
+            g = summary[(summary.set == name) & (summary.rule == rule)]
+            ax.errorbar(
+                g.noise,
+                g.exact,
+                yerr=g.exact_std,
+                **RULE_STYLE.get(rule, {}),
+                ms=3,
+                capsize=2,
+                color=RULE_COLORS[rule],
+                label=RULE_PL[rule],
+            )
+        m = stab[stab.set == name].mean_abs_overlap.mean()
+        ax.set_title(f"{name}\nśr. $|m|$ = {m:.2f}", fontsize=8)
+        ax.set_xlabel("udział odwróconych pikseli")
+        ax.set_ylim(-0.05, 1.05)
+    axes[0].set_ylabel("odtworzono oryginał (asynchr.)")
+    axes[-1].legend(fontsize=6)
+    save_fig(fig, "similar_diverse_controlled")
+
+
+# ---------- repeatability ----------
+
+
+def rep(args):
+    tr = E.training_repeatability(seeds=range(3 if args.quick else 10))
+    tr.to_csv(RESULTS / "training_repeatability_raw.csv", index=False)
+    columns = [("hebb", "---"), ("projection", "---")] + [
+        (r, i) for r in ("oja", "oja_subspace") for i in ("hebb", "random")
+    ]
+    rows = []
+    for name in DATASETS:
+        g = tr[tr.dataset == name].set_index(["rule", "init"])
+        row = {"zbiór": name}
+        for rule, init in columns:
+            r = g.loc[(rule, init)]
+            init_pl = {"hebb": "Hebb", "random": "losowa"}.get(init)
+            label = RULE_PL[rule] if init == "---" else f"{RULE_PL[rule]} ({init_pl})"
+            row[label] = (
+                f"{r.stable_mean:.1f} $\\pm$ {r.stable_std:.1f}"
+                if r.runs > 1
+                else f"{r.stable_mean:.0f}"
+            )
+        rows.append(row)
+    save_table(pd.DataFrame(rows), "training_repeatability", escape=False)
+
+    rr = E.recall_repeatability(seeds=range(2 if args.quick else 5), trials=2 if args.quick else 5)
+    save_table(rr, "recall_repeatability")
+    plot_recall_repeatability(rr)
+
+
+def plot_recall_repeatability(rr: pd.DataFrame):
+    fig, axes = plt.subplots(2, 4, figsize=(11, 4.8), sharey=True)
+    for ax, name in zip(axes.flat, DATASETS, strict=True):
+        for rule in RULE_PLOT_ORDER:
+            g = rr[(rr.dataset == name) & (rr.rule == rule)]
+            ax.errorbar(
+                g.noise,
+                g["mean"],
+                yerr=g["std"],
+                **RULE_STYLE.get(rule, {}),
+                ms=3,
+                capsize=2,
+                color=RULE_COLORS[rule],
+                label=RULE_PL[rule],
+            )
+        ax.set_title(name, fontsize=8)
+        ax.set_ylim(-0.05, 1.05)
+    for ax in axes[1]:
+        ax.set_xlabel("udział odwróconych pikseli")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("odtworzono oryginał")
+    axes[0, -1].legend(fontsize=6)
+    save_fig(fig, "recall_repeatability")
 
 
 # ---------- Q6 ----------
@@ -391,7 +599,7 @@ def q6(args):
     save_table(summary, "random_input")
 
     order = ["stored", "inverse", "spurious", "cycle", "unconverged"]
-    fig, axes = plt.subplots(1, 3, figsize=(11, 3.6), sharey=True)
+    fig, axes = plt.subplots(1, len(E.RULES), figsize=(3.7 * len(E.RULES), 3.6), sharey=True)
     for ax, rule in zip(axes, E.RULES, strict=True):
         g = summary[(summary.rule == rule) & (summary["mode"] == "async")]
         g = g.set_index("dataset").reindex(DATASETS).reset_index()
@@ -518,10 +726,11 @@ def attraction_5x5(net, noise=1, trials=200):
 def q8(args):
     o = E.oscillation_example()
     net, sync, asyn = o["net"], o["sync"], o["async"]
-    frames = [o["pattern"], *sync.history, sync.state]
+    # history is s, -s, s (cycle detected); one more real step shows the cycle continuing
+    extra = net.recall(sync.history[-1])
+    frames = [o["pattern"], *sync.history, extra]
     titles = ["wzorzec uczący"] + [
-        f"synchr. krok {k}\nE={e:.2f}"
-        for k, e in enumerate(o["sync_energy"] + [o["sync_energy"][0]])
+        f"synchr. krok {k}\nE={e:.2f}" for k, e in enumerate([*o["sync_energy"], net.energy(extra)])
     ]
     frames += asyn.history
     titles += [f"asynchr. krok {k}\nE={e:.2f}" for k, e in enumerate(o["async_energy"])]
@@ -571,6 +780,7 @@ def q9(args):
                 "$N$": cats.n_neurons,
                 "Hebb": res["stable"]["hebb"],
                 "Oja": "---",
+                "Oja podprz.": "---",
                 "projekcyjna": res["stable"]["projection"],
                 "Oja: śr. $|\\cos(w_i,v_1)|$": "---",
             },
@@ -579,6 +789,7 @@ def q9(args):
                 "$N$": res["small"].n_neurons,
                 "Hebb": down.loc["hebb", "stable"],
                 "Oja": down.loc["oja", "stable"],
+                "Oja podprz.": down.loc["oja_subspace", "stable"],
                 "projekcyjna": down.loc["projection", "stable"],
                 "Oja: śr. $|\\cos(w_i,v_1)|$": f"{down.loc['oja', 'pc_alignment']:.2f}",
             },
@@ -625,13 +836,24 @@ def q9(args):
     small = res["small"]
     masks = {r: E.trained_network(small, r).stable_patterns() for r in E.RULES}
     titles = [
-        " ".join(f"{RULE_PL[r][0].upper()}{'+' if masks[r][k] else '-'}" for r in E.RULES)
+        " ".join(f"{RULE_ABBR[r]}{'+' if masks[r][k] else '-'}" for r in E.RULES)
         for k in range(small.n_patterns)
     ]
     save_fig(pattern_grid(small.patterns, small.shape, titles, cols=5, scale=1.6), "cats_small")
 
 
-SECTIONS = {"q1": q1, "q3": q3, "q4": q4, "q6": q6, "q7": q7, "q8": q8, "q9": q9}
+SECTIONS = {
+    "data": datasets_table,
+    "q1": q1,
+    "q3": q3,
+    "q4": q4,
+    "q5": q5,
+    "q6": q6,
+    "q7": q7,
+    "q8": q8,
+    "q9": q9,
+    "rep": rep,
+}
 
 
 def main():

@@ -165,6 +165,7 @@ def pattern_stats(X: np.ndarray) -> dict[str, float]:
     M = overlap_matrix(X)
     off = np.abs(M[~np.eye(P, dtype=bool)]) if P > 1 else np.array([0.0])
     C = hebb_crosstalk(X)
+    eig = np.linalg.eigvalsh(X @ X.T)
     return {
         "P": P,
         "N": N,
@@ -174,6 +175,8 @@ def pattern_stats(X: np.ndarray) -> dict[str, float]:
         "mean_abs_overlap": float(off.mean()),
         "max_abs_overlap": float(off.max()),
         "rank": int(np.linalg.matrix_rank(X)),
+        # condition number of X X^T: sets the number of epochs of Oja's subspace rule
+        "cond": float(eig[-1] / eig[0]) if eig[0] > 0 else float("inf"),
         "hebb_unstable_bits": float((C > 1 - P / N).mean()),
         "hebb_unstable_patterns": int((C > 1 - P / N).any(axis=1).sum()),
     }

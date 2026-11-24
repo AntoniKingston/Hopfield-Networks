@@ -43,6 +43,28 @@ large-25x25,oja,sync,0.35,0.0,0.0,0.40282666666666667,2.1083333333333334
 large-25x25,oja,sync,0.4,0.0,0.0,0.40066666666666667,2.1666666666666665
 large-25x25,oja,sync,0.45,0.0,0.0,0.3696266666666667,2.1666666666666665
 large-25x25,oja,sync,0.5,0.0,0.0,0.01085333333333333,2.45
+large-25x25,oja_subspace,async,0.0,1.0,1.0,1.0,0.0
+large-25x25,oja_subspace,async,0.05,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,async,0.1,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,async,0.15,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,async,0.2,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,async,0.25,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,async,0.3,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,async,0.35,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,async,0.4,1.0,1.0,1.0,1.2
+large-25x25,oja_subspace,async,0.45,0.6416666666666667,0.6416666666666667,0.8074399999999999,1.8
+large-25x25,oja_subspace,async,0.5,0.0,0.0,0.028453333333333334,1.7583333333333333
+large-25x25,oja_subspace,sync,0.0,1.0,1.0,1.0,0.0
+large-25x25,oja_subspace,sync,0.05,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,sync,0.1,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,sync,0.15,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,sync,0.2,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,sync,0.25,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,sync,0.3,1.0,1.0,1.0,1.0
+large-25x25,oja_subspace,sync,0.35,1.0,1.0,1.0,1.0416666666666667
+large-25x25,oja_subspace,sync,0.4,0.9916666666666667,0.9916666666666667,0.9971733333333332,1.4083333333333334
+large-25x25,oja_subspace,sync,0.45,0.65,0.65,0.8368800000000001,2.2916666666666665
+large-25x25,oja_subspace,sync,0.5,0.0,0.0,0.017866666666666666,2.441666666666667
 large-25x25,projection,async,0.0,1.0,1.0,1.0,0.0
 large-25x25,projection,async,0.05,1.0,1.0,1.0,1.0
 large-25x25,projection,async,0.1,1.0,1.0,1.0,1.0
@@ -109,6 +131,28 @@ large-25x25 + losowa połowa,oja,sync,0.35,0.06666666666666667,0.066666666666666
 large-25x25 + losowa połowa,oja,sync,0.4,0.058333333333333334,0.058333333333333334,0.4663066666666667,2.408333333333333
 large-25x25 + losowa połowa,oja,sync,0.45,0.025,0.025,0.42919999999999997,2.5
 large-25x25 + losowa połowa,oja,sync,0.5,0.0,0.0,0.048093333333333335,2.841666666666667
+large-25x25 + losowa połowa,oja_subspace,async,0.0,1.0,1.0,1.0,0.0
+large-25x25 + losowa połowa,oja_subspace,async,0.05,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,async,0.1,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,async,0.15,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,async,0.2,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,async,0.25,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,async,0.3,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,async,0.35,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,async,0.4,1.0,1.0,1.0,1.0166666666666666
+large-25x25 + losowa połowa,oja_subspace,async,0.45,0.975,0.975,0.9890933333333333,1.45
+large-25x25 + losowa połowa,oja_subspace,async,0.5,0.0,0.0,-0.0037333333333333333,1.7333333333333334
+large-25x25 + losowa połowa,oja_subspace,sync,0.0,1.0,1.0,1.0,0.0
+large-25x25 + losowa połowa,oja_subspace,sync,0.05,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,sync,0.1,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,sync,0.15,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,sync,0.2,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,sync,0.25,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,sync,0.3,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,sync,0.35,1.0,1.0,1.0,1.0
+large-25x25 + losowa połowa,oja_subspace,sync,0.4,1.0,1.0,1.0,1.0416666666666667
+large-25x25 + losowa połowa,oja_subspace,sync,0.45,0.975,0.975,0.9924,1.7
+large-25x25 + losowa połowa,oja_subspace,sync,0.5,0.0,0.0,-0.003146666666666668,2.2583333333333333
 large-25x25 + losowa połowa,projection,async,0.0,1.0,1.0,1.0,0.0
 large-25x25 + losowa połowa,projection,async,0.05,1.0,1.0,1.0,1.0
 large-25x25 + losowa połowa,projection,async,0.1,1.0,1.0,1.0,1.0
@@ -175,6 +219,28 @@ large-25x50,oja,sync,0.35,0.0,0.0,0.7167999999999999,1.4666666666666666
 large-25x50,oja,sync,0.4,0.0,0.0,0.7167999999999999,1.4666666666666666
 large-25x50,oja,sync,0.45,0.0,0.0,0.7085066666666666,1.475
 large-25x50,oja,sync,0.5,0.0,0.0,0.008373333333333337,1.925
+large-25x50,oja_subspace,async,0.0,1.0,1.0,1.0,0.0
+large-25x50,oja_subspace,async,0.05,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,async,0.1,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,async,0.15,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,async,0.2,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,async,0.25,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,async,0.3,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,async,0.35,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,async,0.4,0.9916666666666667,0.9916666666666667,0.9987999999999999,1.175
+large-25x50,oja_subspace,async,0.45,0.7583333333333333,0.7583333333333333,0.9258000000000001,1.6666666666666667
+large-25x50,oja_subspace,async,0.5,0.0,0.0,0.004466666666666668,1.9666666666666666
+large-25x50,oja_subspace,sync,0.0,1.0,1.0,1.0,0.0
+large-25x50,oja_subspace,sync,0.05,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,sync,0.1,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,sync,0.15,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,sync,0.2,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,sync,0.25,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,sync,0.3,1.0,1.0,1.0,1.0
+large-25x50,oja_subspace,sync,0.35,1.0,1.0,1.0,1.0416666666666667
+large-25x50,oja_subspace,sync,0.4,0.9916666666666667,0.9916666666666667,0.9987999999999999,1.4
+large-25x50,oja_subspace,sync,0.45,0.7416666666666667,0.7416666666666667,0.9361066666666668,2.3
+large-25x50,oja_subspace,sync,0.5,0.0,0.0,-0.013933333333333337,2.975
 large-25x50,projection,async,0.0,1.0,1.0,1.0,0.0
 large-25x50,projection,async,0.05,1.0,1.0,1.0,1.0
 large-25x50,projection,async,0.1,1.0,1.0,1.0,1.0

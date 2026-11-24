@@ -88,6 +88,8 @@ class HopfieldBase(ABC):
         History has one entry per synchronous step; an asynchronous sweep is recorded as
         `frames_per_sweep` snapshots, so the gradual updates can be watched.
         """
+        if mode not in ("sync", "async"):
+            raise ValueError(f"unknown mode: {mode!r} (expected 'sync' or 'async')")
         rng = np.random.default_rng(seed)
         state = self._as_state(state)
         history = [state]
@@ -248,32 +250,69 @@ class Hopfield(HopfieldBase):
         return self.weights
 
     def normal_initialization(self, variance: float, seed: int = 42) -> np.ndarray:
+        """Symmetric random weights, w_ij = w_ji ~ N(0, variance), with zero diagonal."""
         rng = np.random.default_rng(seed)
-        self.weights = rng.normal(0, np.sqrt(variance), (self.size, self.size)).astype(self.dtype)
+        A = rng.normal(0, np.sqrt(variance), (self.size, self.size))
+        self.weights = ((A + A.T) / np.sqrt(2)).astype(self.dtype)
         np.fill_diagonal(self.weights, 0)
         return self.weights
 
-    def _init_weights(self, init: str, seed: int):
+    def _init_weights(self, init: str, seed: int, variance: float | None = None):
         if init == "hebb":
             self.hebbian_train()
         elif init == "random":
-            self.normal_initialization(1 / self.size, seed)
+            self.normal_initialization(1 / self.size if variance is None else variance, seed)
         elif init == "zeros":
             self.weights = np.zeros((self.size, self.size), dtype=self.dtype)
         elif init != "current":
             raise ValueError(f"unknown init: {init}")
 
-    def _iterative_train(self, update, epochs, init, symmetric, tol, shuffle, seed, info_interval):
-        self._init_weights(init, seed)
+    def _start_weights(self, init: str, seed: int, variance: float | None = None) -> np.ndarray:
+        """Initial weights (diagonal included) for an iterative rule.
+
+        "current" continues the previous run, with its learned diagonal, unless the weights
+        were replaced since (every training method assigns a new array).
+        """
+        full = getattr(self, "_full_weights", None)
+        if init == "current" and full is not None and full[1] is self.weights:
+            return full[0].copy()
+        self._init_weights(init, seed, variance)
+        return np.array(self.weights, dtype=self.dtype)
+
+    def _iterative_train(
+        self,
+        update,
+        W: np.ndarray,
+        epochs: int,
+        symmetric: bool,
+        tol: float,
+        shuffle: bool,
+        seed: int,
+        info_interval: int | None,
+        zero_diagonal: bool = True,
+        callback=None,
+        error=None,
+    ) -> np.ndarray:
+        """Online training from weights `W`: `update(W, x)` is the change for one pattern.
+
+        With `zero_diagonal=False` the diagonal is learned like any other weight and set to 0
+        only in the network's weights (`self.weights`). `callback(epoch, weights)` is called
+        after every epoch with the network's weights. Stops early when `error(W)` (by default
+        the largest single weight change in the epoch) drops below `tol`.
+        """
         rng = np.random.default_rng(seed)
-        W = self.weights
+        self.weights = W.copy()
+        np.fill_diagonal(self.weights, 0)
+        if callback is not None:
+            callback(0, self.weights)
         for epoch in range(1, epochs + 1):
             order = rng.permutation(len(self.patterns)) if shuffle else range(len(self.patterns))
             max_change = 0.0
             for x in self.patterns[order]:
                 with np.errstate(over="ignore", invalid="ignore"):
                     delta = update(W, x)
-                np.fill_diagonal(delta, 0)
+                if zero_diagonal:
+                    np.fill_diagonal(delta, 0)
                 if symmetric:
                     delta = (delta + delta.T) / 2
                 W += delta
@@ -281,11 +320,19 @@ class Hopfield(HopfieldBase):
 
             if not np.isfinite(W).all():
                 raise FloatingPointError(f"weights diverged in epoch {epoch}; lower learning_rate")
+            self.weights = W.copy()
+            np.fill_diagonal(self.weights, 0)
+            if callback is not None:
+                callback(epoch, self.weights)
+            err = max_change if error is None else error(W)
             if info_interval and epoch % info_interval == 0:
-                print(f"Epoch {epoch}: max weight change {max_change:.2e}")
-            if max_change < tol:
+                print(
+                    f"Epoch {epoch}: {'max weight change' if error is None else 'error'} {err:.2e}"
+                )
+            if err < tol:
                 break
-        return W
+        self._full_weights = (W, self.weights)
+        return self.weights
 
     def oja_train(
         self,
@@ -297,12 +344,14 @@ class Hopfield(HopfieldBase):
         shuffle: bool = True,
         seed: int = 42,
         info_interval: int | None = None,
+        callback=None,
     ) -> np.ndarray:
         """Oja's rule applied to every neuron: dw_ij = lr * y_i * (x_j - y_i * w_ij), y = W x.
 
-        Stops early when the largest single weight change in an epoch drops below `tol`.
-        The default rate is 0.1 / N: one update changes y_i by about lr * |x|^2 * y_i =
-        lr * N * y_i, so the rule diverges once lr * N is of order 1.
+        Every row is a separate Oja neuron, so every row converges to the same first principal
+        component of the patterns (W tends to rank 1). The default rate is 0.1 / N: one update
+        changes y_i by about lr * |x|^2 * y_i = lr * N * y_i, so the rule diverges once lr * N
+        is of order 1. `init="random"` uses symmetric N(0, 1/N) weights.
         """
         lr = 0.1 / self.size if learning_rate is None else learning_rate
 
@@ -310,8 +359,72 @@ class Hopfield(HopfieldBase):
             y = W @ x
             return lr * (np.outer(y, x) - (y**2)[:, None] * W)
 
+        W = self._start_weights(init, seed)
         return self._iterative_train(
-            update, epochs, init, symmetric, tol, shuffle, seed, info_interval
+            update, W, epochs, symmetric, tol, shuffle, seed, info_interval, callback=callback
+        )
+
+    def oja_subspace_train(
+        self,
+        learning_rate: float | None = None,
+        epochs: int = 1000,
+        init: Literal["hebb", "random", "current"] = "hebb",
+        init_variance: float | None = None,
+        tol: float = 1e-4,
+        shuffle: bool = True,
+        seed: int = 42,
+        info_interval: int | None = None,
+        callback=None,
+    ) -> np.ndarray:
+        """Oja's subspace rule (Oja 1989): dW = lr * y (x - W^T y)^T, y = W x.
+
+        The single-neuron rule (`oja_train`) reconstructs x from the neuron's own output only
+        (x - y_i w_i), so all rows learn the same principal component. Here x is reconstructed
+        from all outputs together (x - W^T y), so the outputs compete: the rows converge to an
+        orthonormal basis of the subspace spanned by the patterns and W to the orthogonal
+        projection onto it, which is the projection (pseudo-inverse) rule.
+
+        In an eigendirection of X X^T with eigenvalue lambda (and W commuting with X^T X) the
+        epoch-averaged update is w <- w + a w (1 - w^2), a = lr * lambda: w -> 1 for
+        0 < a < 1, fastest for a = 1/2. Hence the default lr = 0.5 / lambda_max; the slowest
+        direction then needs ~ lambda_max / lambda_min epochs (the condition number).
+
+        The rule only fixes the subspace: every symmetric W with W^2 = projection (eigenvalues
+        +-1 on the subspace) has zero reconstruction error. A direction whose initial w is
+        negative converges to -1, and then the patterns are not fixed points of the network.
+        `init="hebb"` (the Hebb matrix X^T X scaled to spectral norm 1, positive definite on
+        the subspace) selects W = +projection; `init="random"` (small symmetric Gaussian
+        weights, variance `init_variance`, default 1e-4 / N) usually does not.
+
+        The diagonal is learned (W x has to reconstruct x) and set to 0 in the network.
+        Stops when the rule's reconstruction error max |x - W^T W x| over the patterns drops
+        below `tol`.
+        """
+        X = self.patterns.astype(np.float64)
+        lam_max = float(np.linalg.eigvalsh(X @ X.T)[-1])
+        lr = 0.5 / lam_max if learning_rate is None else learning_rate
+
+        def update(W, x):
+            y = W @ x
+            return lr * np.outer(y, x - W.T @ y)
+
+        if init == "hebb":
+            W = (X.T @ X / lam_max).astype(self.dtype)
+        else:
+            variance = 1e-4 / self.size if init_variance is None else init_variance
+            W = self._start_weights(init, seed, variance)
+        return self._iterative_train(
+            update,
+            W,
+            epochs,
+            True,
+            tol,
+            shuffle,
+            seed,
+            info_interval,
+            zero_diagonal=False,
+            callback=callback,
+            error=lambda W: float(np.abs(X - (X @ W.T) @ W).max()),
         )
 
     def delta_train(
@@ -335,14 +448,16 @@ class Hopfield(HopfieldBase):
         def update(W, x):
             return step * np.outer(x - W @ x, x)
 
+        W = self._start_weights(init, seed)
         return self._iterative_train(
-            update, epochs, init, symmetric, tol, shuffle, seed, info_interval
+            update, W, epochs, symmetric, tol, shuffle, seed, info_interval
         )
 
     def train(self, rule: str, **kwargs) -> np.ndarray:
         rules = {
             "hebb": self.hebbian_train,
             "oja": self.oja_train,
+            "oja_subspace": self.oja_subspace_train,
             "delta": self.delta_train,
             "projection": self.projection_train,
         }

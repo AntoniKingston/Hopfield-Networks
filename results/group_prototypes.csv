@@ -1,0 +1,7 @@
+set,rule,overlap_member,overlap_prototype
+grupy q=0.05,hebb,0.8958933333333333,0.95968
+grupy q=0.05,projection,1.0,0.9008
+grupy q=0.1,hebb,0.8033066666666667,0.8993066666666667
+grupy q=0.1,projection,1.0,0.8015999999999999
+grupy q=0.2,hebb,0.6653511111111111,0.7051022222222223
+grupy q=0.2,projection,1.0,0.6
